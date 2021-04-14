@@ -1,35 +1,39 @@
 <!DOCTYPE html>
 <html>
     <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no" />
+        <title>Stations App</title>
+    
         <link rel="stylesheet" href="https://js.arcgis.com/4.18/esri/themes/light/main.css" />
+        <link rel="stylesheet" href="style.css" />
+        <script src="https://js.arcgis.com/4.18/"></script>
+        <script src="main.js"></script>
+
     </head>
     <body>
-        <header></header>
-        <main>
-            
-                <section class="container esri-widget">
-                    <legend>Coordinates</legend>
-                    <label for="X">X: </label>
-                    <input type="text" name="X" id="X" value="360847.23">
-                    <label for="Y">Y: </label>
-                    <input type="text" name="Y" id="Y" value="4282879.6">
-                    <button name="getstation" id="getStation"
-                    value="https://maps.udot.utah.gov/randh/rest/services/Test/MM_Stationing_Test/MapServer/exts/LRSServer/eventLayers/0/geometryToStation">
-                GET</button>
-                </section>
-                <section class="container esri-widget">
-                    <legend>Stationing</legend>
-                    <label for="station">RouteID: </label>
-                    <input type="text" name="routeID" id="routeID" value="0015PM">
-                    <label for="station">Station: </label>
-                    <input type="text" name="station" id="station" value="140+00.0671">
-                    <button name="getlatlon" id="getCoords"
-                    value="https://maps.udot.utah.gov/randh/rest/services/Test/MM_Stationing_Test/MapServer/exts/LRSServer/eventLayers/0/stationToGeometry">GET</button>
-                </section>
-                <pre id="resultsDiv"></pre>
-        </main>
+        <div id="viewDiv"></div>
+        <section id="stationingForm" class="container esri-widget">
+            <section>
+                <legend>Coordinates</legend>
+                <label for="X">X: </label>
+                <input type="text" name="X" id="X" value="360847.23">
+                <label for="Y">Y: </label>
+                <input type="text" name="Y" id="Y" value="4282879.6">
+                <button name="getstation" id="getStation"
+                value="https://maps.udot.utah.gov/randh/rest/services/Test/MM_Stationing_Test/MapServer/exts/LRSServer/eventLayers/0/geometryToStation">
+            GET</button>
+            </section>
+            <section>
+                <legend>Stationing</legend>
+                <label for="station">RouteID: </label>
+                <input type="text" name="routeID" id="routeID" value="0015PM">
+                <label for="station">Station: </label>
+                <input type="text" name="station" id="station" value="140+00.0671">
+                <button name="getlatlon" id="getCoords"
+                value="https://maps.udot.utah.gov/randh/rest/services/Test/MM_Stationing_Test/MapServer/exts/LRSServer/eventLayers/0/stationToGeometry">GET</button>
+            </section> 
+        </section>
+        <pre id="resultsDiv"></pre>
     </body>
-    
-    <script src="https://js.arcgis.com/4.18/"></script>
-  <script src="main.js"></script>
 </html>
