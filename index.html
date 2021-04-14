@@ -13,16 +13,17 @@
                     <input type="text" name="latitude" id="latitude">
                     <label for="longitude">Longitude</label>
                     <input type="text" name="longitude" id="longitude">
-                    <button name="getstation" 
+                    <button name="getstation" id="getStation"
                     value="https://maps.udot.utah.gov/randh/rest/services/Test/MM_Stationing_Test/MapServer/exts/LRSServer/eventLayers/0/geometryToStation">
                     Get Station</button>
                 </fieldset>
-                <fieldset class="container esri-widget">
+                <pre id="resultsDiv"></pre>
+                <!-- <fieldset class="container esri-widget">
                     <legend>Stationing</legend>
                     <label for="station">Station</label>
                     <input type="text" name="station" id="station">
-                    <button name="getlatlon">Get Coordinates</button>
-            </fieldset>
+                    <button name="getlatlon" id="getCoord">Get Coordinates</button>
+            </fieldset> -->
         </main>
     </body>
     
