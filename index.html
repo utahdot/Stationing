@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" href="https://js.arcgis.com/4.18/esri/themes/light/main.css" />
+    </head>
+    <body>
+        <header></header>
+        <main>
+            
+                <fieldset class="container esri-widget">
+                    <legend>Coordinates</legend>
+                    <label for="latitude">Latitude</label>
+                    <input type="text" name="latitude" id="latitude">
+                    <label for="longitude">Longitude</label>
+                    <input type="text" name="longitude" id="longitude">
+                    <button name="getstation" 
+                    value="https://maps.udot.utah.gov/randh/rest/services/Test/MM_Stationing_Test/MapServer/exts/LRSServer/eventLayers/0/geometryToStation">
+                    Get Station</button>
+                </fieldset>
+                <fieldset class="container esri-widget">
+                    <legend>Stationing</legend>
+                    <label for="station">Station</label>
+                    <input type="text" name="station" id="station">
+                    <button name="getlatlon">Get Coordinates</button>
+            </fieldset>
+        </main>
+    </body>
+    
+    <script src="https://js.arcgis.com/4.18/"></script>
+  <script src="main.js"></script>
+</html>
