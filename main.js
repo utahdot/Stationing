@@ -3,6 +3,8 @@ require(["esri/request"], function(esriRequest) {
     const resultsDiv = document.getElementById("resultsDiv");
     const xInput = document.getElementById("X");
     const yInput = document.getElementById("Y");
+    const sInput = document.getElementById("station")
+    const rInput = document.getElementById("routeID")
 
 
     // Make the request on a button click using the
@@ -21,11 +23,31 @@ require(["esri/request"], function(esriRequest) {
             },
             responseType: "json"
           };
-      
-      esriRequest(url, options).then(function(response) {
-        console.log("response", response);
-        let responseJSON = JSON.stringify(response, null, 2);
-        resultsDiv.innerHTML = responseJSON;
-      });
+          makeRequest(url, options)
     });
+
+   getCoords.addEventListener("click", function(btn){
+        const url = btn.target.value;
+        const station = sInput.value;
+        const routeID = rInput.value;
+
+        let options = {
+            query: {
+              locations: `[{ "routeId" : ${routeID}, "station" : ${station} }]`,
+              outSR: 4326,
+              f: "json"
+            },
+            responseType: "json"
+          };
+          makeRequest(url, options)
+
+    })
+
+    function makeRequest(url, options){
+        esriRequest(url, options).then(function(response) {
+            console.log("response", response);
+            let responseJSON = JSON.stringify(response, null, 2);
+            resultsDiv.innerHTML = responseJSON;
+          });
+    }
   });
