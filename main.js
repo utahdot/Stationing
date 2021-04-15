@@ -45,6 +45,10 @@ require(["esri/geometry/Point", "esri/Map", "esri/layers/MapImageLayer", "esri/v
     view.ui.add(stationExpand, "top-right");
 
     function convertSR(lat, lon){
+      /**Promise takes in latitude and longitude
+       * converts to point geometry
+       * projects to NAD83 Zone 12
+       */
       return new Promise((resolve) =>{
         let point = new Point({
           type: "point",
@@ -55,29 +59,29 @@ require(["esri/geometry/Point", "esri/Map", "esri/layers/MapImageLayer", "esri/v
         projection.load().then(function () {
           const pointProjected = projection.project(point, NAD83);
           resolve([pointProjected.x, pointProjected.y]);
-  
         });
-        
       });
     }
-      
-    
 
     view.on("click", function (event) {
       /**gets the coordinates of the spot you click in the map
       * converts those coordinates to NAD83
       * populates those coordinates in the stationing form
       */
-      convertSR(event.mapPoint.latitude,event.mapPoint.longitude).then(function(r){
-        xInput.value = r[0];
-        yInput.value = r[1];
-      })
-      
+      convertSR(event.mapPoint.latitude,event.mapPoint.longitude)
+      .then((r) => setXYInput(r[0], r[1]));
     });
 
+    function setXYInput(x, y){
+      /**sets coodinates in stationing form */
+      xInput.value = x;
+      yInput.value = y;
+    }
 
     getStation.addEventListener("click", function (btn) {
-      /**listener for the 'Stationing" portion of the Coordinates */
+      /**listener for the 'Coordinates" portion of the Coordinates 
+       * fetches values from form and adds them to the options for the REST API Call
+      */
       const X = xInput.value;
       const Y = yInput.value;
       const url = btn.target.value;
@@ -95,6 +99,9 @@ require(["esri/geometry/Point", "esri/Map", "esri/layers/MapImageLayer", "esri/v
     });
 
     getCoords.addEventListener("click", function (btn) {
+      /**listener for the 'Stationing" portion of the Coordinates 
+      * fetches values from form and adds them to the options for the REST API Call
+      */
       const url = btn.target.value;
       const station = sInput.value;
       const routeID = rInput.value;
@@ -112,20 +119,27 @@ require(["esri/geometry/Point", "esri/Map", "esri/layers/MapImageLayer", "esri/v
     });
 
     function makeRequest(url, options, type) {
+      /**Takes in REST Call options and which type, 
+       * based on which button was clicked i the form */
       esriRequest(url, options).then(function (response) {
-        alert(JSON.stringify(response, null, 2));
         setResults(response, type);
       });
     }
 
     function setResults(response, type) {
+      /**takes results of rest call
+       * gets the x/y and route/station depending on call type
+       * sets to form
+       * calls zoomTo, to center the map.
+       */
+
       let x, y;
       if (type == "Coordinates") {
-        
         x = response["data"]["locations"][0]["geometries"][0].x;
         y = response["data"]["locations"][0]["geometries"][0].y;
-        xInput.value = x;
-        yInput.value = y;
+        //must convert from WGS84 lat long to NAD83 XY
+        convertSR(x, x).then((r) =>setXYInput(r[0], r[1]));
+
       }
       else {
         sInput.value = response["data"]["locations"][0]["results"][0].station;
@@ -136,6 +150,9 @@ require(["esri/geometry/Point", "esri/Map", "esri/layers/MapImageLayer", "esri/v
       }
       zoomTo(x, y);
     }
+
+
+
     function zoomTo(x, y) {
       view.goTo({
         center: [x, y]
