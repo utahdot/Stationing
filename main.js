@@ -57,6 +57,7 @@ require(["esri/geometry/Point", "esri/Map", "esri/layers/MapImageLayer", "esri/v
         });
   
         projection.load().then(function () {
+          console.log(lat,lon)
           const pointProjected = projection.project(point, NAD83);
           resolve([pointProjected.x, pointProjected.y]);
         });
@@ -138,7 +139,7 @@ require(["esri/geometry/Point", "esri/Map", "esri/layers/MapImageLayer", "esri/v
         x = response["data"]["locations"][0]["geometries"][0].x;
         y = response["data"]["locations"][0]["geometries"][0].y;
         //must convert from WGS84 lat long to NAD83 XY
-        convertSR(x, x).then((r) =>setXYInput(r[0], r[1]));
+        convertSR(y, x).then((r) => setXYInput(r[0], r[1]));
 
       }
       else {
