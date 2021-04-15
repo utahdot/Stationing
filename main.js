@@ -39,6 +39,7 @@ require(["esri/geometry/Point", "esri/Map", "esri/layers/MapImageLayer", "esri/v
     const stationExpand = new Expand({
       expandIconClass: "esri-icon-layer-list",
       view: view,
+      expanded: true,
       content: stationingForm
     })
 
