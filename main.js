@@ -24,7 +24,7 @@ require(["esri/geometry/Point", "esri/layers/FeatureLayer", "esri/Map", "esri/la
 
     const routesLayer = new MapImageLayer({
       url: "https://maps.udot.utah.gov/randh/rest/services/Test/MM_Stationing_Test/MapServer",
-      sublayers: [{id: 1, visible: false}]
+      sublayers: [{id: 1, visible: true}]
     });
 
     const stationLayer = new FeatureLayer({
@@ -70,12 +70,11 @@ require(["esri/geometry/Point", "esri/layers/FeatureLayer", "esri/Map", "esri/la
     });
 
     function highlightFilter(route, station) {
-
+      station = splitstation(station)
       let featureFilter = {
-
-        where: `STATION_LABEL = "${route}_${station}"`
+        where: `STATION_LABEL = '${route}_${station}'`
       };
-
+      console.log(featureFilter);
       // set effect on excluded features
       // make them gray and transparent
       
@@ -157,10 +156,13 @@ require(["esri/geometry/Point", "esri/layers/FeatureLayer", "esri/Map", "esri/la
         },
         responseType: "json"
       };
+      highlightFilter(routeID, station)
       makeRequest(url, options, "Coordinates")
 
     });
-
+    function splitstation(station){
+      return station.split("+")[0];
+    }
     function makeRequest(url, options, type) {
       /**Takes in REST Call options and which type, 
        * based on which button was clicked i the form */
@@ -178,7 +180,6 @@ require(["esri/geometry/Point", "esri/layers/FeatureLayer", "esri/Map", "esri/la
    
       let x, y,station,routeID;
       if (type == "Coordinates") {
-        alert(JSON.stringify(response["requestOptions"]["query"]["location"]));
         routeID = response["data"]["locations"][0].routeID;
         x = response["data"]["locations"][0]["geometries"][0].x;
         y = response["data"]["locations"][0]["geometries"][0].y;
@@ -187,14 +188,15 @@ require(["esri/geometry/Point", "esri/layers/FeatureLayer", "esri/Map", "esri/la
 
       }
       else {
-        alert(JSON.stringify(response["data"]["locations"][0]));
+        
         station = response["data"]["locations"][0]["results"][0].station;
         routeID = response["data"]["locations"][0]["results"][0].routeId;
         sInput.value = station;
         rInput.value = routeID;
-        
+        highlightFilter(routeID, station)        
         x = response["data"]["locations"][0]["results"][0].geometry.x;
         y = response["data"]["locations"][0]["results"][0].geometry.y;
+
       }
       zoomTo(x, y);
     }

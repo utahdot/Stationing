@@ -1,4 +1,37 @@
-{
-    "data":{
-        "spatialReference":{
-            "wkid":4326},"locations":[{"status":"esriLocatingOK","routeId":"0015PM","geometryType":"esriGeometryPoint","geometries":[{"x":-112.59986231984621,"y":38.683595499912,"z":0,"m":140.3250890900002}],"stationEvents":[{"eventId":"{A98D334D-CCC4-4DC0-A553-EC1179172228}"}]}]},"requestOptions":{"query":{"locations":"[{ \"routeId\" : 0015PM, \"station\" : 140+00.0671 }]","outSR":4326,"f":"json"},"responseType":"json"},"ssl":false,"url":"https://maps.udot.utah.gov/randh/rest/services/Test/MM_Stationing_Test/MapServer/exts/LRSServer/eventLayers/0/stationToGeometry"}
+{ 
+    "data": {
+        "spatialReference": {
+            "wkid": 4326
+        },
+        "locations": [
+            {
+                "status": "esriLocatingOK",
+                "routeId": "0015PM",
+                "geometryType": "esriGeometryPoint",
+                "geometries": [
+                    {
+                        "x": -112.59986231984621,
+                        "y": 38.683595499912,
+                        "z": 0,
+                        "m": 140.3250890900002
+                    }
+                ],
+                "stationEvents": [
+                    {
+                        "eventId": "{A98D334D-CCC4-4DC0-A553-EC1179172228}"
+                    }
+                ]
+            }
+        ]
+    },
+    "requestOptions": {
+        "query": {
+            "locations": "[{ \"routeId\" : 0015PM, \"station\" : 140+00.0671 }]",
+            "outSR": 4326,
+            "f": "json"
+        },
+        "responseType": "json"
+    },
+    "ssl": false,
+    "url": "https://maps.udot.utah.gov/randh/rest/services/Test/MM_Stationing_Test/MapServer/exts/LRSServer/eventLayers/0/stationToGeometry"
+}
