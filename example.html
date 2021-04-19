@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no" />
+    <title>Query Related Features | Sample | ArcGIS API for JavaScript 4.18</title>
+
+    <style>
+      html,
+      body {
+        height: 100%;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      #viewDiv {
+        height: 100%;
+        width: 100%;
+      }
+
+  #topbar {
+        padding: 10px;
+        width: 190px;
+      }
+      .style-button {
+        margin: 3px;
+      }
+    </style>
+
+    <link rel="stylesheet" href="https://js.arcgis.com/4.18/esri/themes/light/main.css" />
+    <script src="https://js.arcgis.com/4.18/"></script>
+
+    <script>
+      require([
+        "esri/Map",
+        "esri/views/MapView",
+        "esri/layers/FeatureLayer",
+        "esri/geometry/geometryEngineAsync"
+      ], function(
+        Map,  MapView, FeatureLayer, geometryEngineAsync
+      ) {
+
+        var highlight;
+        // Create the layer
+        const layer = new FeatureLayer({
+          url: "https://sampleserver6.arcgisonline.com/arcgis/rest/services/USA/MapServer/0",
+          outFields: ["*"]
+        });
+
+        const layer2 = new FeatureLayer({
+          url: "https://sampleserver6.arcgisonline.com/arcgis/rest/services/USA/MapServer/2",
+          outFields: ["*"]
+        })
+
+        const map = new Map({
+          basemap: "gray-vector",
+          layers: [layer2, layer]
+        });
+
+        const view = new MapView({
+          container: "viewDiv",
+          map: map,
+          center: [-98.5795, 39.8282],
+          zoom: 2,
+          popup: {
+            autoOpenEnabled: false
+          }
+        });
+        view.ui.add("topbar", "top-right");
+
+        view.on("click", function(event) {
+          queryFeatures(event);
+        });
+        
+        let cityLayerView;
+        view.whenLayerView(layer).then(function(lv){
+          cityLayerView = lv;
+        });
+        
+        let statesLayerView;
+        view.whenLayerView(layer2).then(function(layerView){
+          statesLayerView = layerView;
+        });
+
+        function queryFeatures(screenPoint) {
+          const point = view.toMap(screenPoint);
+
+          // Query the for the feature ids where the user clicked
+          statesLayerView.filter = null; 
+          statesLayerView.queryFeatures({
+            geometry: point,
+            spatialRelationship: "intersects",
+            returnGeometry: true,
+            outFields: ["*"]
+          }).then(function(results) {
+            if (!results.features.length) { return; }
+
+            // Highlight the area returned from the first query
+            view.whenLayerView(layer2).then(function(layerView){
+              console.log(results)
+              if (highlight) {
+                highlight.remove();
+              }
+              highlight = layerView.highlight(results.features);
+            });
+            
+            
+            // Query the for the related features for the features ids found
+            var query = {
+               geometry: results.features[0].geometry
+            };
+            cityLayerView.queryFeatures(query).then(function(results){
+              console.log("cities", results.features.length);
+              cityLayerView.filter = {
+                geometry: query.geometry,
+              };
+                 
+            });
+          });
+        }
+        
+        document.getElementById("layer12").addEventListener("click", () =>{
+          statesLayerView.queryFeatures({
+            where: "sub_region = 'Pacific'",
+            returnGeometry: true
+          }).then(function(results){
+            statesLayerView.filter = {
+              where: "sub_region = 'Pacific'"
+            }
+            console.log(results.features);
+            var geoms = results.features.map(function(item){
+              return item.geometry
+            })
+            geometryEngineAsync.union(geoms).then(function(response){
+              console.log("udnaralw", response);  // geometry representing the union of the input geometries
+               cityLayerView.queryFeatures({
+                  returnGeometry: true,
+                  geometry: response
+                 })
+                 .then((cityResults) => {
+                   console.log(cityResults.features.length, "cities returned");
+                   cityLayerView.filter = {
+                     geometry: response
+                   }
+                 })
+            });
+
+            var result = {
+              features: [],
+              fields: layer.fields.slice()
+            };
+            //// you can use this one if you want to loop through each state
+            //// returned from the first query and use each state geometry to
+            //// query cities layer
+            //// results.features.forEach(function(feature){
+            //   function queryCities(feature) {
+            //     return cityLayerView.queryFeatures({
+            //       returnGeometry: true,
+            //       geometry: feature.geometry
+            //     })
+            //     .then((featureSet) => {
+            //       result.features = result.features.concat(featureSet.features);
+            //       if (featureSet.exceededTransferLimit) {
+            //       return queryPage(page + 1);
+            //     }
+            //     console.log("result", result);
+            //     cityLayerView.filter = {
+            //       where: "sub_region = 'Pacific'"
+            //     }
+            //     return result;
+            //     })
+            //   }
+            //   return queryCities(feature);
+            // });
+          })
+        });
+        
+      
+      });
+    </script>
+  </head>
+
+  <body>
+    <div id="viewDiv"></div>
+    <div id="topbar" class="esri-widget">
+      <button class="esri-button style-button" id="layer12" type="button"> select pacific cities </button>
+    </div>
+  </body>
+</html>

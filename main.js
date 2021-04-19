@@ -7,12 +7,13 @@
  * try lat/lon to route/station from map click 
  *  
  * https://jsfiddle.net/b3gcehnf/ 
+ * https://codepen.io/U_B_U/pen/bGgaBKX?editors=1000
  * 
  * 
 */
 
-require(["esri/geometry/Point", "esri/layers/FeatureLayer", "esri/Map", "esri/layers/MapImageLayer", "esri/views/MapView", "esri/request", "esri/widgets/Expand", "esri/geometry/projection", "esri/geometry/SpatialReference"],
-  function (Point, FeatureLayer, Map, MapImageLayer, MapView, esriRequest, Expand, projection, SpatialReference) {
+require(["esri/Graphic","esri/symbols/SimpleFillSymbol","esri/symbols/SimpleMarkerSymbol","esri/layers/GraphicsLayer","esri/geometry/Point","esri/geometry/geometryEngine", "esri/layers/FeatureLayer", "esri/Map", "esri/layers/MapImageLayer", "esri/views/MapView", "esri/request", "esri/widgets/Expand", "esri/geometry/projection", "esri/geometry/SpatialReference"],
+  function (Graphic,SimpleFillSymbol,SimpleMarkerSymbol,GraphicsLayer,Point, geometryEngine, FeatureLayer, Map, MapImageLayer, MapView, esriRequest, Expand, projection, SpatialReference) {
     "use strict"
     const xInput = document.getElementById("X");
     const yInput = document.getElementById("Y");
@@ -20,11 +21,48 @@ require(["esri/geometry/Point", "esri/layers/FeatureLayer", "esri/Map", "esri/la
     const rInput = document.getElementById("routeID");
     const stationingForm = document.getElementById("stationingForm");
     const NAD83 = new SpatialReference({ wkid: 26912 });
-    let stationView;
+    
+    
 
-    const routesLayer = new MapImageLayer({
-      url: "https://maps.udot.utah.gov/randh/rest/services/Test/MM_Stationing_Test/MapServer",
-      sublayers: [{id: 1, visible: true}]
+        // Layers
+        var bufferLayer = new GraphicsLayer();
+        var selectionLayer = new GraphicsLayer();
+      
+        // Symbols
+        var Symbol = new SimpleMarkerSymbol({
+          color: [240, 98, 146],
+          outline: {
+            color: [128, 128, 128, 0.5],
+            width: 0.5
+          }
+        });
+        var selectSymbol = new SimpleMarkerSymbol({
+          color: "cyan",
+          outline: {
+            color: [128, 128, 128, 0.5],
+            width: "0.5px"
+          }
+        });
+        var nearestSymbol = new SimpleMarkerSymbol({
+          color: "#ffd700",
+          size: 20,
+          style: "circle",
+          outline: {
+            color: [128, 128, 128, 0.5],
+            width: 3
+          }
+        });
+        var fillSymbol = new SimpleFillSymbol({
+          color: [33, 150, 243, 0.5],
+          outline: {
+            color: [128, 128, 128, 0.5],
+            width: "2px"
+          }
+        });
+
+
+    const routesLayer = new FeatureLayer({
+      url: "https://maps.udot.utah.gov/randh/rest/services/Test/MM_Stationing_Test/MapServer/1",
     });
 
     const stationLayer = new FeatureLayer({
@@ -32,7 +70,7 @@ require(["esri/geometry/Point", "esri/layers/FeatureLayer", "esri/Map", "esri/la
     });
     
     const map = new Map({
-      layers: [routesLayer, stationLayer],
+      layers: [routesLayer, stationLayer,bufferLayer, selectionLayer],
       basemap: "gray" // Basemap  layer service
     });
 
@@ -51,22 +89,15 @@ require(["esri/geometry/Point", "esri/layers/FeatureLayer", "esri/Map", "esri/la
     });
 
     view.ui.add(stationExpand, "top-right");
-    
-    view.when(function() {
-      /**this loops through all layers in the map
-       * and then all layerViews
-       * and gets the layerView for the stationing points
-       */
-      map.layers.forEach(function(layer) {
-        view.whenLayerView(layer).then(function(layerView) {
-          if (layer.type === "feature" && layer.geometryType == "point") {
-            stationView = layerView;
 
+    let stationLayerView;
+    view.whenLayerView(stationLayer).then(function(layer){
+      stationLayerView = layer;
+    });
 
-          }
-        });
-      });
-      
+    let routesLayerView;
+    view.whenLayerView(routesLayer).then(function(layer){
+      routesLayerView = layer;
     });
 
     function highlightFilter(route, station) {
@@ -78,7 +109,7 @@ require(["esri/geometry/Point", "esri/layers/FeatureLayer", "esri/Map", "esri/la
       // set effect on excluded features
       // make them gray and transparent
       
-      stationView.effect = {
+      stationLayerView.effect = {
           filter: featureFilter,
           excludedEffect: "grayscale(100%) opacity(30%)"
       };
@@ -98,11 +129,15 @@ require(["esri/geometry/Point", "esri/layers/FeatureLayer", "esri/Map", "esri/la
         });
 
         projection.load().then(function () {
-          console.log(lat, lon)
+         
           const pointProjected = projection.project(point, NAD83);
           resolve([pointProjected.x, pointProjected.y]);
         });
       });
+    }
+
+    function queryRoutes(buffer) {
+      
     }
 
     view.on("click", function (event) {
@@ -110,12 +145,46 @@ require(["esri/geometry/Point", "esri/layers/FeatureLayer", "esri/Map", "esri/la
       * converts those coordinates to NAD83
       * populates those coordinates in the stationing form
       */
-      convertSR(event.mapPoint.latitude, event.mapPoint.longitude)
+      const buffer = geometryEngine.geodesicBuffer(
+        new Point(event.mapPoint.longitude, event.mapPoint.latitude),
+        300
+      );
+      bufferLayer.removeAll();
+      selectionLayer.removeAll();
+
+      bufferLayer.add(new Graphic({ geometry: buffer, symbol: fillSymbol }));
+      let query = {geometry: buffer,spatialRelationship: "intersects",
+      returnGeometry: true,
+      outFields: ["*"]};
+
+      routesLayerView.queryFeatures(query).then(function(results){
+        // console.log("routes", results.features.length);
+        routesLayerView.filter = {
+           geometry: query.geometry,
+         };
+         if(results.features.length>0){
+          let nearestPoint = geometryEngine.nearestCoordinate(
+            results.features[0].geometry,
+            new Point(event.mapPoint.longitude, event.mapPoint.latitude)
+          );
+
+          let res = new Point(nearestPoint.coordinate.longitude,nearestPoint.coordinate.latitude);
+          selectionLayer.add(new Graphic({ geometry: res, symbol: selectSymbol }));
+          console.log("nearest", nearestPoint.coordinate.longitude,nearestPoint.coordinate.latitude);
+          console.log("map", event.mapPoint.longitude, event.mapPoint.latitude);
+          convertSR(nearestPoint.coordinate.latitude,nearestPoint.coordinate.longitude)
         .then((r) => setXYInput(r[0], r[1]));
+         } 
+
+         
+       });
+      
+      
     });
 
     function setXYInput(x, y) {
       /**sets coodinates in stationing form */
+      
       xInput.value = x;
       yInput.value = y;
     }
