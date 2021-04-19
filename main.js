@@ -1,7 +1,7 @@
 /**todo
  * lat/lon OR x/y to route/station
  * route/station to lat/lon
- * 
+ * error messages if the input is bad
  * zoom to result, select the station
  * 
  * try lat/lon to route/station from map click 
@@ -11,8 +11,8 @@
  * 
 */
 
-require(["esri/geometry/Point", "esri/Map", "esri/layers/MapImageLayer", "esri/views/MapView", "esri/request", "esri/widgets/Expand", "esri/geometry/projection", "esri/geometry/SpatialReference"],
-  function (Point, Map, MapImageLayer, MapView, esriRequest, Expand, projection, SpatialReference) {
+require(["esri/geometry/Point", "esri/layers/FeatureLayer", "esri/Map", "esri/layers/MapImageLayer", "esri/views/MapView", "esri/request", "esri/widgets/Expand", "esri/geometry/projection", "esri/geometry/SpatialReference"],
+  function (Point, FeatureLayer, Map, MapImageLayer, MapView, esriRequest, Expand, projection, SpatialReference) {
     "use strict"
     const xInput = document.getElementById("X");
     const yInput = document.getElementById("Y");
@@ -20,12 +20,19 @@ require(["esri/geometry/Point", "esri/Map", "esri/layers/MapImageLayer", "esri/v
     const rInput = document.getElementById("routeID");
     const stationingForm = document.getElementById("stationingForm");
     const NAD83 = new SpatialReference({ wkid: 26912 });
-    const stationLayer = new MapImageLayer({
-      url: "https://maps.udot.utah.gov/randh/rest/services/Test/MM_Stationing_Test/MapServer"
+    let stationView;
+
+    const routesLayer = new MapImageLayer({
+      url: "https://maps.udot.utah.gov/randh/rest/services/Test/MM_Stationing_Test/MapServer",
+      sublayers: [{id: 1, visible: false}]
     });
 
+    const stationLayer = new FeatureLayer({
+      url: "https://maps.udot.utah.gov/randh/rest/services/Test/MM_Stationing_Test/MapServer/0"
+    });
+    
     const map = new Map({
-      layers: [stationLayer],
+      layers: [routesLayer, stationLayer],
       basemap: "gray" // Basemap  layer service
     });
 
@@ -41,24 +48,58 @@ require(["esri/geometry/Point", "esri/Map", "esri/layers/MapImageLayer", "esri/v
       view: view,
       expanded: true,
       content: stationingForm
-    })
+    });
 
     view.ui.add(stationExpand, "top-right");
+    
+    view.when(function() {
+      /**this loops through all layers in the map
+       * and then all layerViews
+       * and gets the layerView for the stationing points
+       */
+      map.layers.forEach(function(layer) {
+        view.whenLayerView(layer).then(function(layerView) {
+          if (layer.type === "feature" && layer.geometryType == "point") {
+            stationView = layerView;
 
-    function convertSR(lat, lon){
+
+          }
+        });
+      });
+      
+    });
+
+    function highlightFilter(route, station) {
+
+      let featureFilter = {
+
+        where: `STATION_LABEL = "${route}_${station}"`
+      };
+
+      // set effect on excluded features
+      // make them gray and transparent
+      
+      stationView.effect = {
+          filter: featureFilter,
+          excludedEffect: "grayscale(100%) opacity(30%)"
+      };
+
+    }
+   
+    function convertSR(lat, lon) {
       /**Promise takes in latitude and longitude
        * converts to point geometry
        * projects to NAD83 Zone 12
        */
-      return new Promise((resolve) =>{
+      return new Promise((resolve) => {
         let point = new Point({
           type: "point",
           latitude: lat,
-          longitude: lon 
+          longitude: lon
         });
-  
+
         projection.load().then(function () {
-          console.log(lat,lon)
+          console.log(lat, lon)
           const pointProjected = projection.project(point, NAD83);
           resolve([pointProjected.x, pointProjected.y]);
         });
@@ -70,11 +111,11 @@ require(["esri/geometry/Point", "esri/Map", "esri/layers/MapImageLayer", "esri/v
       * converts those coordinates to NAD83
       * populates those coordinates in the stationing form
       */
-      convertSR(event.mapPoint.latitude,event.mapPoint.longitude)
-      .then((r) => setXYInput(r[0], r[1]));
+      convertSR(event.mapPoint.latitude, event.mapPoint.longitude)
+        .then((r) => setXYInput(r[0], r[1]));
     });
 
-    function setXYInput(x, y){
+    function setXYInput(x, y) {
       /**sets coodinates in stationing form */
       xInput.value = x;
       yInput.value = y;
@@ -134,9 +175,11 @@ require(["esri/geometry/Point", "esri/Map", "esri/layers/MapImageLayer", "esri/v
        * sets to form
        * calls zoomTo, to center the map.
        */
-
-      let x, y;
+   
+      let x, y,station,routeID;
       if (type == "Coordinates") {
+        alert(JSON.stringify(response["requestOptions"]["query"]["location"]));
+        routeID = response["data"]["locations"][0].routeID;
         x = response["data"]["locations"][0]["geometries"][0].x;
         y = response["data"]["locations"][0]["geometries"][0].y;
         //must convert from WGS84 lat long to NAD83 XY
@@ -144,16 +187,17 @@ require(["esri/geometry/Point", "esri/Map", "esri/layers/MapImageLayer", "esri/v
 
       }
       else {
-        sInput.value = response["data"]["locations"][0]["results"][0].station;
-        rInput.value = response["data"]["locations"][0]["results"][0].routeId;
-
-        x= response["data"]["locations"][0]["results"][0].geometry.x;
-        y= response["data"]["locations"][0]["results"][0].geometry.y;
+        alert(JSON.stringify(response["data"]["locations"][0]));
+        station = response["data"]["locations"][0]["results"][0].station;
+        routeID = response["data"]["locations"][0]["results"][0].routeId;
+        sInput.value = station;
+        rInput.value = routeID;
+        
+        x = response["data"]["locations"][0]["results"][0].geometry.x;
+        y = response["data"]["locations"][0]["results"][0].geometry.y;
       }
       zoomTo(x, y);
     }
-
-
 
     function zoomTo(x, y) {
       view.goTo({
