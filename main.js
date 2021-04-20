@@ -116,28 +116,20 @@ require(["esri/Graphic","esri/symbols/SimpleFillSymbol","esri/symbols/SimpleMark
 
     }
    
-    function convertSR(lat, lon) {
+    function convertSR(geometry) {
       /**Promise takes in latitude and longitude
        * converts to point geometry
        * projects to NAD83 Zone 12
+       * TODO: make this just return the reprojected point
        */
       return new Promise((resolve) => {
-        let point = new Point({
-          type: "point",
-          latitude: lat,
-          longitude: lon
-        });
-
         projection.load().then(function () {
          
-          const pointProjected = projection.project(point, NAD83);
-          resolve([pointProjected.x, pointProjected.y]);
+          const projectedGeom = projection.project(geometry, NAD83);
+         
+          resolve(projectedGeom);
         });
       });
-    }
-
-    function queryRoutes(buffer) {
-      
     }
 
     view.on("click", function (event) {
@@ -145,41 +137,42 @@ require(["esri/Graphic","esri/symbols/SimpleFillSymbol","esri/symbols/SimpleMark
       * converts those coordinates to NAD83
       * populates those coordinates in the stationing form
       */
-      const buffer = geometryEngine.geodesicBuffer(
-        new Point(event.mapPoint.longitude, event.mapPoint.latitude),
-        300
-      );
-      bufferLayer.removeAll();
-      selectionLayer.removeAll();
 
-      bufferLayer.add(new Graphic({ geometry: buffer, symbol: fillSymbol }));
-      let query = {geometry: buffer,spatialRelationship: "intersects",
-      returnGeometry: true,
-      outFields: ["*"]};
+       let mapPoint = new Point({
+        x: event.mapPoint.longitude,
+        y: event.mapPoint.latitude
+      })
 
-      routesLayerView.queryFeatures(query).then(function(results){
-        // console.log("routes", results.features.length);
-        routesLayerView.filter = {
-           geometry: query.geometry,
-         };
-         if(results.features.length>0){
-          let nearestPoint = geometryEngine.nearestCoordinate(
-            results.features[0].geometry,
-            new Point(event.mapPoint.longitude, event.mapPoint.latitude)
-          );
+      convertSR(mapPoint).then((projectedPoint)=>{
+        console.log(projectedPoint.spatialReference.wkid);
+        const buffer = geometryEngine.buffer(
+          projectedPoint,
+          100, "feet"
+        );
+        bufferLayer.removeAll();
+        selectionLayer.removeAll();
+        bufferLayer.add(new Graphic({ geometry: buffer, symbol: fillSymbol }));
+        let query = {geometry: buffer,spatialRelationship: "intersects", returnGeometry: true,outFields: ["*"]};
+        routesLayer.queryFeatures(query).then(function(results){
+        
+          routesLayerView.filter = {
+             geometry: query.geometry,
+           };
+           
+            if(results.features.length>0){
+            let intersect = geometryEngine.intersect(results.features[0].geometry,buffer);
+          let nearestPoint = geometryEngine.nearestVertex(intersect,projectedPoint);
+              console.log(nearestPoint)
+          let res = new Point({spatialReference: NAD83,y: nearestPoint.coordinate.y, x: nearestPoint.coordinate.x});
 
-          let res = new Point(nearestPoint.coordinate.longitude,nearestPoint.coordinate.latitude);
           selectionLayer.add(new Graphic({ geometry: res, symbol: selectSymbol }));
-          console.log("nearest", nearestPoint.coordinate.longitude,nearestPoint.coordinate.latitude);
-          console.log("map", event.mapPoint.longitude, event.mapPoint.latitude);
-          convertSR(nearestPoint.coordinate.latitude,nearestPoint.coordinate.longitude)
-        .then((r) => setXYInput(r[0], r[1]));
-         } 
 
-         
+          setXYInput(nearestPoint.coordinate.x,nearestPoint.coordinate.y);
+         } 
+      });
+
        });
-      
-      
+            
     });
 
     function setXYInput(x, y) {
@@ -253,11 +246,14 @@ require(["esri/Graphic","esri/symbols/SimpleFillSymbol","esri/symbols/SimpleMark
         x = response["data"]["locations"][0]["geometries"][0].x;
         y = response["data"]["locations"][0]["geometries"][0].y;
         //must convert from WGS84 lat long to NAD83 XY
-        convertSR(y, x).then((r) => setXYInput(r[0], r[1]));
+        let p= new Point({
+          x: x,
+          y: y
+        })
+        convertSR(p).then((r) => setXYInput(r.x, r.y));
 
       }
       else {
-        
         station = response["data"]["locations"][0]["results"][0].station;
         routeID = response["data"]["locations"][0]["results"][0].routeId;
         sInput.value = station;
