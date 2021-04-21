@@ -104,7 +104,7 @@ require(["esri/Graphic","esri/symbols/SimpleFillSymbol","esri/symbols/SimpleMark
       let featureFilter = {
         where: `STATION_LABEL = '${route}_${station}'`
       };
-      console.log(featureFilter);
+      
       // set effect on excluded features
       // make them gray and transparent
       
@@ -146,40 +146,45 @@ require(["esri/Graphic","esri/symbols/SimpleFillSymbol","esri/symbols/SimpleMark
         console.log(projectedPoint.spatialReference.wkid);
         const buffer = geometryEngine.buffer(
           projectedPoint,
-          100, "feet"
+          200, "feet"
         );
         bufferLayer.removeAll();
         selectionLayer.removeAll();
+
         bufferLayer.add(new Graphic({ geometry: buffer, symbol: fillSymbol }));
         let query = {geometry: buffer,spatialRelationship: "intersects", returnGeometry: true,outFields: ["*"]};
         routesLayer.queryFeatures(query).then(function(results){
         
-          routesLayerView.filter = {
-             geometry: query.geometry,
-           };
+          // routesLayerView.filter = {
+          //    geometry: query.geometry,
+          //  };
            
             if(results.features.length>0){
             let intersect = geometryEngine.intersect(results.features[0].geometry,buffer);
-          let nearestPoint = geometryEngine.nearestVertex(intersect,projectedPoint);
+            let nearestPoint = geometryEngine.nearestVertex(intersect,projectedPoint);
 
           let res = new Point({spatialReference: NAD83,y: nearestPoint.coordinate.y, x: nearestPoint.coordinate.x});
 
           selectionLayer.add(new Graphic({ geometry: res, symbol: selectSymbol }));
 
-          setXYInput(nearestPoint.coordinate.x,nearestPoint.coordinate.y);
+          let options = {
+            query: {
+              locations: `[{"routeId" : "", "geometry" : { "x" : ${res.x}, "y" : ${res.y} }}]`,
+              inSR: 26912,
+              outSR: 4326,
+              f: "json"
+            },
+            responseType: "json"
+          };
+
+          makeRequest(options, "geometryToStation")
+          
          } 
       });
 
        });
             
     });
-
-    function setXYInput(x, y) {
-      /**sets coodinates in stationing form */
-      
-      xInput.value = x;
-      yInput.value = y;
-    }
 
     getStation.addEventListener("click", function (btn) {
       /**listener for the 'Coordinates" portion of the Coordinates 
@@ -233,7 +238,7 @@ require(["esri/Graphic","esri/symbols/SimpleFillSymbol","esri/symbols/SimpleMark
       /**Takes in REST Call options and which type, 
        * based on which button was clicked i the form */
       esriRequest(urls[type], options).then(function (response) {
-        console.log(response)
+        
         setResults(response, type);
       });
     }
@@ -271,14 +276,17 @@ require(["esri/Graphic","esri/symbols/SimpleFillSymbol","esri/symbols/SimpleMark
             responseType: "json"
           };
           makeRequest(options, "geometryToStation")
-        })
+        });
         
       }else{
         station = response["data"]["locations"][0]["results"][0].station;
         routeID = response["data"]["locations"][0]["results"][0].routeId;
+        measure = response["data"]["locations"][0]["results"][0].geometry.m;
+        mpInput.value = measure;
         sInput.value = station;
         rInput.value = routeID;
         highlightFilter(routeID, station)        
+        
         x = response["data"]["locations"][0]["results"][0].geometry.x;
         y = response["data"]["locations"][0]["results"][0].geometry.y;
       }
