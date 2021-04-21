@@ -1,7 +1,4 @@
 /**todo
- * geom->measure?
- * route, measure -> geom -> station 
- * station -> measure
  * pop-up
  * Zoom level
  * station+50.01 ->next up
@@ -110,7 +107,7 @@ require(["esri/Graphic","esri/symbols/SimpleFillSymbol","esri/symbols/SimpleMark
       
       stationLayerView.effect = {
           filter: featureFilter,
-          excludedEffect: "grayscale(100%) opacity(30%)"
+          excludedEffect: "grayscale(60%) opacity(50%)"
       };
 
     }
@@ -155,10 +152,6 @@ require(["esri/Graphic","esri/symbols/SimpleFillSymbol","esri/symbols/SimpleMark
         let query = {geometry: buffer,spatialRelationship: "intersects", returnGeometry: true,outFields: ["*"]};
         routesLayer.queryFeatures(query).then(function(results){
         
-          // routesLayerView.filter = {
-          //    geometry: query.geometry,
-          //  };
-           
             if(results.features.length>0){
             let intersect = geometryEngine.intersect(results.features[0].geometry,buffer);
             let nearestPoint = geometryEngine.nearestVertex(intersect,projectedPoint);
