@@ -15,25 +15,20 @@
         <div id="viewDiv"></div>
         <section id="stationingForm" class="container esri-widget">
             <section>
-                <legend>Coordinates</legend>
-                <label for="X">X: </label>
-                <input type="text" name="X" id="X" value="360847.23">
-                <label for="Y">Y: </label>
-                <input type="text" name="Y" id="Y" value="4282879.6">
-                <button name="getstation" id="getStation"
-                value="https://maps.udot.utah.gov/randh/rest/services/Test/MM_Stationing_Test/MapServer/exts/LRSServer/eventLayers/0/geometryToStation">
-            GET STATION</button>
-            </section>
-
-            <section>
-                <legend>Stationing</legend>
-                <label for="station">RouteID: </label>
+                <label for="routeID">RouteID: </label>
                 <input type="text" name="routeID" id="routeID" value="0015PM">
+            <section id="locations">
+                <legend>Locations</legend>
+                <label for="milepost">Milepost: </label>
+                <input type="text" name="milepost" id="milepost" value="288.5">
+                <button name="getstation" id="getStation">
+            Get Station</button>
                 <label for="station">Station: </label>
                 <input type="text" name="station" id="station" value="140+00.0671">
-                <button name="getCoords" id="getCoords"
-                value="https://maps.udot.utah.gov/randh/rest/services/Test/MM_Stationing_Test/MapServer/exts/LRSServer/eventLayers/0/stationToGeometry">GET COORDS</button>
+                <button name="getMP" id="getMP"
+                value=>Get MP</button>
             </section> 
+        </section>
         </section>
     </body>
 </html>

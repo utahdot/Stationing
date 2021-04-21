@@ -10,3 +10,11 @@ body,
 #stationingForm{
     padding: 5px;
 }
+legend{
+  font-size: 1.15em;
+}
+#locations{
+  padding-top: 15px;
+  display: flex;
+  flex-direction: column;
+}

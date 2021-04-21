@@ -1,11 +1,13 @@
 /**todo
- * lat/lon OR x/y to route/station
- * route/station to lat/lon
- * error messages if the input is bad
- * zoom to result, select the station
+ * geom->measure?
+ * route, measure -> geom -> station 
+ * station -> measure
+ * pop-up
+ * Zoom level
+ * station+50.01 ->next up
+ * station+49.9-> station
  * 
- * try lat/lon to route/station from map click 
- *  
+ * 
  * https://jsfiddle.net/b3gcehnf/ 
  * https://codepen.io/U_B_U/pen/bGgaBKX?editors=1000
  * 
@@ -15,15 +17,12 @@
 require(["esri/Graphic","esri/symbols/SimpleFillSymbol","esri/symbols/SimpleMarkerSymbol","esri/layers/GraphicsLayer","esri/geometry/Point","esri/geometry/geometryEngine", "esri/layers/FeatureLayer", "esri/Map", "esri/layers/MapImageLayer", "esri/views/MapView", "esri/request", "esri/widgets/Expand", "esri/geometry/projection", "esri/geometry/SpatialReference"],
   function (Graphic,SimpleFillSymbol,SimpleMarkerSymbol,GraphicsLayer,Point, geometryEngine, FeatureLayer, Map, MapImageLayer, MapView, esriRequest, Expand, projection, SpatialReference) {
     "use strict"
-    const xInput = document.getElementById("X");
-    const yInput = document.getElementById("Y");
+    const mpInput = document.getElementById("milepost");
     const sInput = document.getElementById("station");
     const rInput = document.getElementById("routeID");
     const stationingForm = document.getElementById("stationingForm");
     const NAD83 = new SpatialReference({ wkid: 26912 });
     
-    
-
         // Layers
         var bufferLayer = new GraphicsLayer();
         var selectionLayer = new GraphicsLayer();
@@ -162,7 +161,7 @@ require(["esri/Graphic","esri/symbols/SimpleFillSymbol","esri/symbols/SimpleMark
             if(results.features.length>0){
             let intersect = geometryEngine.intersect(results.features[0].geometry,buffer);
           let nearestPoint = geometryEngine.nearestVertex(intersect,projectedPoint);
-              console.log(nearestPoint)
+
           let res = new Point({spatialReference: NAD83,y: nearestPoint.coordinate.y, x: nearestPoint.coordinate.x});
 
           selectionLayer.add(new Graphic({ geometry: res, symbol: selectSymbol }));
@@ -186,27 +185,24 @@ require(["esri/Graphic","esri/symbols/SimpleFillSymbol","esri/symbols/SimpleMark
       /**listener for the 'Coordinates" portion of the Coordinates 
        * fetches values from form and adds them to the options for the REST API Call
       */
-      const X = xInput.value;
-      const Y = yInput.value;
-      const url = btn.target.value;
+      const routeID = rInput.value;
+      const measure = mpInput.value
 
       let options = {
         query: {
-          locations: `[{"routeId" : "", "geometry" : { "x" : ${X}, "y" : ${Y} }}]`,
-          inSR: 26912,
+          locations: `[{"routeId": ${routeID},"measure": ${measure}}]`,
           outSR: 4326,
           f: "json"
         },
         responseType: "json"
       };
-      makeRequest(url, options, "Station")
+      makeRequest(options, "measureToGeometry")
     });
 
-    getCoords.addEventListener("click", function (btn) {
+    getMP.addEventListener("click", function (btn) {
       /**listener for the 'Stationing" portion of the Coordinates 
       * fetches values from form and adds them to the options for the REST API Call
       */
-      const url = btn.target.value;
       const station = sInput.value;
       const routeID = rInput.value;
 
@@ -218,17 +214,26 @@ require(["esri/Graphic","esri/symbols/SimpleFillSymbol","esri/symbols/SimpleMark
         },
         responseType: "json"
       };
+      
       highlightFilter(routeID, station)
-      makeRequest(url, options, "Coordinates")
+      makeRequest(options, "stationToGeometry")
 
     });
     function splitstation(station){
       return station.split("+")[0];
     }
-    function makeRequest(url, options, type) {
+
+    const urls={
+      "measureToGeometry" : "https://maps.udot.utah.gov/randh/rest/services/ALRS/MapServer/exts/LRSServer/networkLayers/0/measureToGeometry",
+      "stationToGeometry" : "https://maps.udot.utah.gov/randh/rest/services/Test/MM_Stationing_Test/MapServer/exts/LRSServer/eventLayers/0/stationToGeometry",
+      "geometryToStation" : "https://maps.udot.utah.gov/randh/rest/services/Test/MM_Stationing_Test/MapServer/exts/LRSServer/eventLayers/0/geometryToStation"
+
+    }
+    function makeRequest(options, type) {
       /**Takes in REST Call options and which type, 
        * based on which button was clicked i the form */
-      esriRequest(url, options).then(function (response) {
+      esriRequest(urls[type], options).then(function (response) {
+        console.log(response)
         setResults(response, type);
       });
     }
@@ -240,20 +245,35 @@ require(["esri/Graphic","esri/symbols/SimpleFillSymbol","esri/symbols/SimpleMark
        * calls zoomTo, to center the map.
        */
    
-      let x, y,station,routeID;
-      if (type == "Coordinates") {
-        routeID = response["data"]["locations"][0].routeID;
+      let x, y,station,routeID,measure;
+      if (type == "stationToGeometry") {
+        console.log(response)
+        routeID = response["data"]["locations"][0].routeId;
+        measure = response["data"]["locations"][0]["geometries"][0].m;
         x = response["data"]["locations"][0]["geometries"][0].x;
         y = response["data"]["locations"][0]["geometries"][0].y;
-        //must convert from WGS84 lat long to NAD83 XY
-        let p= new Point({
-          x: x,
-          y: y
-        })
-        convertSR(p).then((r) => setXYInput(r.x, r.y));
+        mpInput.value = Number((measure).toFixed(3));
 
       }
-      else {
+      else if (type=="measureToGeometry"){
+        x = response["data"]["locations"][0]["geometry"].x;
+        y = response["data"]["locations"][0]["geometry"].y;
+        routeID = response["data"]["locations"][0].routeId;
+
+        convertSR(new Point({x:x, y:y})).then((r) =>{
+          let options = {
+            query: {
+              locations: `[{"routeId" : ${routeID}, "geometry" : { "x" : ${r.x}, "y" : ${r.y} }}]`,
+              inSR: 26912,
+              outSR: 4326,
+              f: "json"
+            },
+            responseType: "json"
+          };
+          makeRequest(options, "geometryToStation")
+        })
+        
+      }else{
         station = response["data"]["locations"][0]["results"][0].station;
         routeID = response["data"]["locations"][0]["results"][0].routeId;
         sInput.value = station;
@@ -261,7 +281,6 @@ require(["esri/Graphic","esri/symbols/SimpleFillSymbol","esri/symbols/SimpleMark
         highlightFilter(routeID, station)        
         x = response["data"]["locations"][0]["results"][0].geometry.x;
         y = response["data"]["locations"][0]["results"][0].geometry.y;
-
       }
       zoomTo(x, y);
     }
