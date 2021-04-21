@@ -4,10 +4,14 @@
  * station+50.01 ->next up
  * station+49.9-> station
  * 
+ * questions?
+ * buffer size?
+ * exclude ramps?
+ * vertex highlight?
  * 
- * https://jsfiddle.net/b3gcehnf/ 
- * https://codepen.io/U_B_U/pen/bGgaBKX?editors=1000
  * 
+ * refactor
+ * spaghetti
  * 
 */
 
@@ -140,7 +144,7 @@ require(["esri/Graphic","esri/symbols/SimpleFillSymbol","esri/symbols/SimpleMark
       })
 
       convertSR(mapPoint).then((projectedPoint)=>{
-        console.log(projectedPoint.spatialReference.wkid);
+       
         const buffer = geometryEngine.buffer(
           projectedPoint,
           200, "feet"
@@ -245,7 +249,7 @@ require(["esri/Graphic","esri/symbols/SimpleFillSymbol","esri/symbols/SimpleMark
    
       let x, y,station,routeID,measure;
       if (type == "stationToGeometry") {
-        console.log(response)
+
         routeID = response["data"]["locations"][0].routeId;
         measure = response["data"]["locations"][0]["geometries"][0].m;
         x = response["data"]["locations"][0]["geometries"][0].x;
