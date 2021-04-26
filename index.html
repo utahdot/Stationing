@@ -16,7 +16,10 @@
         <section id="stationingForm" class="container esri-widget">
             <section>
                 <label for="routeID">RouteID: </label>
-                <input type="text" name="routeID" id="routeID" value="0015PM">
+                <select aria-invalid="false" name="routeID" id="routeID"
+								id="stationId" maxlength="">
+								<option>Select a Route</option>
+							</select>
             <section id="locations">
                 <legend>Locations</legend>
                 <label for="milepost">Milepost: </label>

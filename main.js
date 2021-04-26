@@ -4,16 +4,13 @@
  * station+50.01 ->next up
  * station+49.9-> station
  * 
- * dropdown list of routes
- * station # on dot in map, "Legend"
- * basemap toggle
+ * remove ramps
  * 
  * questions?
  * buffer size?
  * exclude ramps?
  * vertex highlight?
  * 
- 
  * refactor
  * 
 */
@@ -57,6 +54,8 @@ require([
   const rInput = document.getElementById("routeID");
   const stationingForm = document.getElementById("stationingForm");
   const NAD83 = new SpatialReference({ wkid: 26912 });
+
+  let routeIdList, maxRouteStation = {};
 
   // Layers
   let bufferLayer = new GraphicsLayer();
@@ -137,6 +136,48 @@ const basemapExpand = new Expand({
   view.ui.add(stationExpand, "top-left");
   view.ui.add(basemapExpand, "top-right");
  
+  stationLayer.when(() => {
+    stationLayer.queryFeatures().then((res)=> getRoutes(res.features));
+  })
+
+  function getRoutes(features){
+    /** create global array routeIdList of unique route Ids
+     * call getMaxStation when done
+     */
+    let routes = []
+    features.forEach((feature)=>{
+      routes.push(feature.attributes.ROUTE_ID)
+    });
+    routeIdList = routes.filter((item, index) =>{
+      return routes.indexOf(item)===index;
+    });
+    getMaxStation(features);
+  }
+
+  function getMaxStation(features){
+    features.forEach((feature)=>{
+      let routeId = feature.attributes.ROUTE_ID
+      let legend = parseInt(feature.attributes.LEGEND)
+      if(maxRouteStation[routeId]){
+        if(legend > maxRouteStation[routeId]){
+          maxRouteStation[routeId] = legend
+        }
+      }else{
+        maxRouteStation[routeId] = legend
+      }
+    })
+    populateRoutes(maxRouteStation);
+  }
+
+  function populateRoutes(maxStation){
+    for(let key in maxStation){
+      const opt = document.createElement('option');
+      opt.value = key;
+      opt.innerHTML = key;
+      rInput.appendChild(opt);
+    }
+
+  }
 
   let stationLayerView;
   view.whenLayerView(stationLayer).then(function (layer) {
@@ -337,6 +378,7 @@ const basemapExpand = new Expand({
   }
 
   function updateForm(routeId, measure, station){
+    console.log(routeId, measure, station);
     if(routeId){
       rInput.value = routeId;
     }
