@@ -7,8 +7,6 @@
  * dropdown list of routes
  * station # on dot in map, "Legend"
  * option top change base map
- * update route on click
- * rounding decimal point on every action
  * 
  * questions?
  * buffer size?
@@ -111,11 +109,6 @@ require([
   let stationLayerView;
   view.whenLayerView(stationLayer).then(function (layer) {
     stationLayerView = layer;
-  });
-
-  let routesLayerView;
-  view.whenLayerView(routesLayer).then(function (layer) {
-    routesLayerView = layer;
   });
 
   function highlightFilter(route, station) {
