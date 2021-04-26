@@ -6,7 +6,6 @@
  * 
  * dropdown list of routes
  * station # on dot in map, "Legend"
- * option top change base map
  * basemap toggle
  * 
  * questions?
@@ -20,6 +19,7 @@
 */
 
 require([
+  "esri/widgets/BasemapGallery",
   "esri/layers/support/LabelClass",
   "esri/Graphic",
   "esri/symbols/SimpleFillSymbol",
@@ -35,6 +35,7 @@ require([
   "esri/geometry/projection",
   "esri/geometry/SpatialReference",
 ], function (
+  BasemapGallery,
   LabelClass,
   Graphic,
   SimpleFillSymbol,
@@ -58,8 +59,8 @@ require([
   const NAD83 = new SpatialReference({ wkid: 26912 });
 
   // Layers
-  var bufferLayer = new GraphicsLayer();
-  var selectionLayer = new GraphicsLayer();
+  let bufferLayer = new GraphicsLayer();
+  let selectionLayer = new GraphicsLayer();
 
 
   const selectSymbol = new SimpleMarkerSymbol({
@@ -105,8 +106,6 @@ require([
       labelingInfo: stationLabel  
   });
 
- 
-
   const map = new Map({
     layers: [routesLayer, stationLayer, bufferLayer, selectionLayer],
     basemap: "gray", // Basemap  layer service
@@ -119,14 +118,25 @@ require([
     container: "viewDiv", // Div element
   });
 
+  const basemapGallery = new BasemapGallery({
+    view: view
+  });
+
   const stationExpand = new Expand({
-    expandIconClass: "esri-icon-layer-list",
+    expandIconClass: "esri-icon-applications",
     view: view,
     expanded: true,
     content: stationingForm,
   });
+const basemapExpand = new Expand({
+  expandIconClass: "esri-icon-basemap",
+  view: view,
+  content: basemapGallery
+})
 
-  view.ui.add(stationExpand, "top-right");
+  view.ui.add(stationExpand, "top-left");
+  view.ui.add(basemapExpand, "top-right");
+ 
 
   let stationLayerView;
   view.whenLayerView(stationLayer).then(function (layer) {
