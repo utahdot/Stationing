@@ -7,6 +7,7 @@
  * dropdown list of routes
  * station # on dot in map, "Legend"
  * option top change base map
+ * basemap toggle
  * 
  * questions?
  * buffer size?
@@ -19,6 +20,7 @@
 */
 
 require([
+  "esri/layers/support/LabelClass",
   "esri/Graphic",
   "esri/symbols/SimpleFillSymbol",
   "esri/symbols/SimpleMarkerSymbol",
@@ -33,6 +35,7 @@ require([
   "esri/geometry/projection",
   "esri/geometry/SpatialReference",
 ], function (
+  LabelClass,
   Graphic,
   SimpleFillSymbol,
   SimpleMarkerSymbol,
@@ -80,10 +83,29 @@ require([
       "https://maps.udot.utah.gov/randh/rest/services/Test/MM_Stationing_Test/MapServer/1",
   });
 
+  const stationLabel = new LabelClass({
+    labelExpressionInfo: { expression: "$feature.STATION" },
+    symbol: {
+      type: "text",  // autocasts as new TextSymbol()
+      color: "black",
+      haloSize: 1,
+      haloColor: "white",
+      font: {  // autocast as new Font()
+        family: "Ubuntu Mono",
+        size: 9,
+        weight: "bold"
+      }
+    },
+    labelPlacement:"center-center"
+  });
+
   const stationLayer = new FeatureLayer({
     url:
       "https://maps.udot.utah.gov/randh/rest/services/Test/MM_Stationing_Test/MapServer/0",
+      labelingInfo: stationLabel  
   });
+
+ 
 
   const map = new Map({
     layers: [routesLayer, stationLayer, bufferLayer, selectionLayer],
@@ -111,8 +133,8 @@ require([
     stationLayerView = layer;
   });
 
+
   function highlightFilter(route, station) {
-    console.log(route, station)
     station = splitstation(station);
     let featureFilter = {
       where: `STATION_LABEL = '${route}_${station}'`,
