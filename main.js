@@ -81,6 +81,7 @@ require([
   const routesLayer = new FeatureLayer({
     url:
       "https://maps.udot.utah.gov/randh/rest/services/Test/MM_Stationing_Test/MapServer/1",
+      definitionExpression: "RoUTE_TYPE =  'M'" 
   });
 
   const stationLabel = new LabelClass({
