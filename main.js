@@ -4,11 +4,13 @@
  * station+50.01 ->next up
  * station+49.9-> station
  * 
- * remove ramps
+ * handle errors in rest calls
+ * station highlighting
+ * 
  * 
  * questions?
  * buffer size?
- * exclude ramps?
+
  * vertex highlight?
  * 
  * refactor
@@ -81,7 +83,7 @@ require([
   const routesLayer = new FeatureLayer({
     url:
       "https://maps.udot.utah.gov/randh/rest/services/Test/MM_Stationing_Test/MapServer/1",
-      definitionExpression: "RoUTE_TYPE =  'M'" 
+      definitionExpression: "ROUTE_TYPE =  'M'" 
   });
 
   const stationLabel = new LabelClass({
@@ -138,24 +140,12 @@ const basemapExpand = new Expand({
   view.ui.add(basemapExpand, "top-right");
  
   stationLayer.when(() => {
-    stationLayer.queryFeatures().then((res)=> getRoutes(res.features));
+    /**query the StationLayer to get a feature set */
+    stationLayer.queryFeatures().then((res)=> getMaxStation(res.features));
   })
 
-  function getRoutes(features){
-    /** create global array routeIdList of unique route Ids
-     * call getMaxStation when done
-     */
-    let routes = []
-    features.forEach((feature)=>{
-      routes.push(feature.attributes.ROUTE_ID)
-    });
-    routeIdList = routes.filter((item, index) =>{
-      return routes.indexOf(item)===index;
-    });
-    getMaxStation(features);
-  }
-
   function getMaxStation(features){
+    /**takes in feature set and interates through to get the largest Station for each */
     features.forEach((feature)=>{
       let routeId = feature.attributes.ROUTE_ID
       let legend = parseInt(feature.attributes.LEGEND)
@@ -171,6 +161,7 @@ const basemapExpand = new Expand({
   }
 
   function populateRoutes(maxStation){
+    /**takes in maxStation Object and creats an option foreach route entry */
     for(let key in maxStation){
       const opt = document.createElement('option');
       opt.value = key;
