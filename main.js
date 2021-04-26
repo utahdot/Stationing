@@ -84,7 +84,7 @@ require([
   });
 
   const stationLabel = new LabelClass({
-    labelExpressionInfo: { expression: "$feature.STATION" },
+    labelExpressionInfo: { expression: "$feature.LEGEND" },
     symbol: {
       type: "text",  // autocasts as new TextSymbol()
       color: "black",
