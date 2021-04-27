@@ -375,7 +375,7 @@ const basemapExpand = new Expand({
       rInput.value = routeId;
     }
     if(measure){
-      mpInput.value = Number(measure.toFixed(3));
+      mpInput.value = Number(measure.toFixed(7));
     }
     if(station){
       sInput.value = station;
