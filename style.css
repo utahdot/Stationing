@@ -7,8 +7,10 @@ body,
   width: 100%;
 }
 
-#stationingForm{
+#stationingForm, #extrnalLinks{
     padding: 5px;
+    display: flex;
+    flex-direction: column;
 }
 legend{
   font-size: 1.15em;

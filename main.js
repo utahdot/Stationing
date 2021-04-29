@@ -1,19 +1,19 @@
 /**todo
  * pop-up
  * Zoom level
- * station+50.01 ->next up
- * station+49.9-> station
  * 
  * handle errors in rest calls
- * station highlighting
- * 
+ * roadview explorer https://roadview.udot.utah.gov/utah/rvxsearch.php?Route={expression/expr0}&Mile={Measure}
+ * add point on get REf Post/Linear Measure
+ * select dominant route with concurrency
  * 
  * questions?
  * buffer size?
 
- * vertex highlight?
+ * vertex highlight? -> nearestpoint?
  * test
- * refactor
+ * 
+ * refactor to factory functions probably
  * 
 */
 
@@ -55,14 +55,21 @@ require([
   const sInput = document.getElementById("station");
   const rInput = document.getElementById("routeID");
   const stationingForm = document.getElementById("stationingForm");
+  const externalLinks = document.getElementById("extrnalLinks");
+
+  const exMeasure = document.querySelector("#exMeasure");
+  const exLat = document.querySelector("#exLat");
+  const exLon = document.querySelector("#exLon");
+  const openRoadview = document.querySelector("#openRoadview");
+  const openGoogleStreet = document.querySelector("#openGoogleStreet");
+  const exrouteId = document.querySelector("#exrouteId");
+
+  
+  let maxRouteStation = {};
   const NAD83 = new SpatialReference({ wkid: 26912 });
-
-  let routeIdList, maxRouteStation = {};
-
   // Layers
   let bufferLayer = new GraphicsLayer();
   let selectionLayer = new GraphicsLayer();
-
 
   const selectSymbol = new SimpleMarkerSymbol({
     color: "cyan",
@@ -83,29 +90,30 @@ require([
   const routesLayer = new FeatureLayer({
     url:
       "https://maps.udot.utah.gov/randh/rest/services/Test/MM_Stationing_Test/MapServer/1",
-      definitionExpression: "ROUTE_TYPE =  'M'" 
+    definitionExpression: "ROUTE_TYPE =  'M'",
   });
 
   const stationLabel = new LabelClass({
     labelExpressionInfo: { expression: "$feature.LEGEND" },
     symbol: {
-      type: "text",  // autocasts as new TextSymbol()
+      type: "text", // autocasts as new TextSymbol()
       color: "black",
       haloSize: 1,
       haloColor: "white",
-      font: {  // autocast as new Font()
+      font: {
+        // autocast as new Font()
         family: "Ubuntu Mono",
         size: 9,
-        weight: "bold"
-      }
+        weight: "bold",
+      },
     },
-    labelPlacement:"center-center"
+    labelPlacement: "center-center",
   });
 
   const stationLayer = new FeatureLayer({
     url:
       "https://maps.udot.utah.gov/randh/rest/services/Test/MM_Stationing_Test/MapServer/0",
-      labelingInfo: stationLabel  
+    labelingInfo: stationLabel,
   });
 
   const map = new Map({
@@ -121,7 +129,15 @@ require([
   });
 
   const basemapGallery = new BasemapGallery({
-    view: view
+    view: view,
+  });
+
+  const externalExpand = new Expand({
+    expandIconClass: "esri-icon-hollow-eye",
+    view: view,
+    expanded: false,
+    content: externalLinks,
+    group: "top-left",
   });
 
   const stationExpand = new Expand({
@@ -129,53 +145,52 @@ require([
     view: view,
     expanded: true,
     content: stationingForm,
+    group: "top-left",
   });
-const basemapExpand = new Expand({
-  expandIconClass: "esri-icon-basemap",
-  view: view,
-  content: basemapGallery
-})
+  const basemapExpand = new Expand({
+    expandIconClass: "esri-icon-basemap",
+    view: view,
+    content: basemapGallery,
+  });
 
-  view.ui.add(stationExpand, "top-left");
+  view.ui.add([stationExpand, externalExpand], "top-left");
   view.ui.add(basemapExpand, "top-right");
- 
+
   stationLayer.when(() => {
     /**query the StationLayer to get a feature set */
-    stationLayer.queryFeatures().then((res)=> getMaxStation(res.features));
-  })
+    stationLayer.queryFeatures().then((res) => getMaxStation(res.features));
+  });
 
-  function getMaxStation(features){
+  function getMaxStation(features) {
     /**takes in feature set and interates through to get the largest Station for each */
-    features.forEach((feature)=>{
-      let routeId = feature.attributes.ROUTE_ID
-      let legend = parseInt(feature.attributes.LEGEND)
-      if(maxRouteStation[routeId]){
-        if(legend > maxRouteStation[routeId]){
-          maxRouteStation[routeId] = legend
+    features.forEach((feature) => {
+      let routeId = feature.attributes.ROUTE_ID;
+      let legend = parseInt(feature.attributes.LEGEND);
+      if (maxRouteStation[routeId]) {
+        if (legend > maxRouteStation[routeId]) {
+          maxRouteStation[routeId] = legend;
         }
-      }else{
-        maxRouteStation[routeId] = legend
+      } else {
+        maxRouteStation[routeId] = legend;
       }
-    })
+    });
     populateRoutes(maxRouteStation);
   }
 
-  function populateRoutes(maxStation){
+  function populateRoutes(maxStation) {
     /**takes in maxStation Object and creats an option foreach route entry */
-    for(let key in maxStation){
-      const opt = document.createElement('option');
+    for (let key in maxStation) {
+      const opt = document.createElement("option");
       opt.value = key;
       opt.innerHTML = key;
       rInput.appendChild(opt);
     }
-
   }
 
   let stationLayerView;
   view.whenLayerView(stationLayer).then(function (layer) {
     stationLayerView = layer;
   });
-
 
   function highlightFilter(route, station) {
     station = splitstation(station);
@@ -267,7 +282,20 @@ const basemapExpand = new Expand({
     });
   });
 
-  getStation.addEventListener("click", function (btn) {
+  
+
+  
+  openRoadview.addEventListener("click", function(){
+    
+    const url = `https://roadview.udot.utah.gov/utah/rvxsearch.php?Route=${exrouteId.value.substring(0,5)}&Mile=${exMeasure.value}`;
+    window.open(url, "_blank");
+  });
+   openGoogleStreet. addEventListener("click", function(){
+     const url = `https://maps.google.com/maps?q=&layer=c&ll=${exLat.value},${exLon.value}&cbll=${exLat.value},${exLon.value}&cbp=11,0,0,0,0`
+     window.open(url, "_blank");
+   });
+
+  getStation.addEventListener("click", function () {
     /**listener for the 'Coordinates" portion of the Coordinates
      * fetches values from form and adds them to the options for the REST API Call
      */
@@ -333,18 +361,22 @@ const basemapExpand = new Expand({
 
     let x, y, station, routeId, measure;
     if (type == "stationToGeometry") {
-      
       routeId = response["data"]["locations"][0].routeId;
       measure = response["data"]["locations"][0]["geometries"][0].m;
       x = response["data"]["locations"][0]["geometries"][0].x;
       y = response["data"]["locations"][0]["geometries"][0].y;
-
-      updateForm(routeId, measure, false)
+      updateExternal(routeId, measure, y, x)
+      updateForm(routeId, measure, false);
     } else if (type == "measureToGeometry") {
+
       x = response["data"]["locations"][0]["geometry"].x;
       y = response["data"]["locations"][0]["geometry"].y;
+      measure = response["data"]["locations"][0]["geometry"].m;
       routeId = response["data"]["locations"][0].routeId;
-      updateForm(routeId, false, false);
+
+      updateForm(routeId, measure, false);
+      updateExternal(routeId, measure, y, x)
+
       convertSR(new Point({ x: x, y: y })).then((r) => {
         let options = {
           query: {
@@ -364,20 +396,38 @@ const basemapExpand = new Expand({
       x = response["data"]["locations"][0]["results"][0].geometry.x;
       y = response["data"]["locations"][0]["results"][0].geometry.y;
       updateForm(routeId, measure, station);
+      updateExternal(routeId, measure, y, x)
       highlightFilter(routeId, station);
     }
     zoomTo(x, y);
   }
 
-  function updateForm(routeId, measure, station){
-    console.log(routeId, measure, station);
-    if(routeId){
+  function updateExternal(routeId, measure, lat, lon) {
+
+    if (routeId) {
+      exrouteId.value = routeId;
+    }
+
+    if (measure) {
+      exMeasure.value = Number(measure.toFixed(7));
+    }
+    if (lat) {
+      exLat.value = lat;
+    }
+    if (lon) {
+      exLon.value = lon;
+    }
+  }
+
+  function updateForm(routeId, measure, station) {
+    
+    if (routeId) {
       rInput.value = routeId;
     }
-    if(measure){
+    if (measure) {
       mpInput.value = Number(measure.toFixed(7));
     }
-    if(station){
+    if (station) {
       sInput.value = station;
     }
   }
