@@ -3,7 +3,6 @@
  * Zoom level
  * 
  * handle errors in rest calls
- * roadview explorer https://roadview.udot.utah.gov/utah/rvxsearch.php?Route={expression/expr0}&Mile={Measure}
  * add point on get REf Post/Linear Measure
  * select dominant route with concurrency
  * 
@@ -11,7 +10,6 @@
  * buffer size?
 
  * vertex highlight? -> nearestpoint?
- * test
  * 
  * refactor to factory functions probably
  * 
