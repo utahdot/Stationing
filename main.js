@@ -1,19 +1,19 @@
 /**todo
  * pop-up
  * Zoom level
- * 
+ *
  * handle errors in rest calls
  * add point on get REf Post/Linear Measure
  * select dominant route with concurrency
- * 
+ *
  * questions?
  * buffer size?
-
+ *re-use of routeId/routeID is causing bugs
  * vertex highlight? -> nearestpoint?
- * 
+ *
  * refactor to factory functions probably
- * 
-*/
+ *
+ */
 
 require([
   "esri/widgets/BasemapGallery",
@@ -62,7 +62,6 @@ require([
   const openGoogleStreet = document.querySelector("#openGoogleStreet");
   const exrouteId = document.querySelector("#exrouteId");
 
-  
   let maxRouteStation = {};
   const NAD83 = new SpatialReference({ wkid: 26912 });
   // Layers
@@ -87,7 +86,7 @@ require([
 
   const routesLayer = new FeatureLayer({
     url:
-      "https://maps.udot.utah.gov/randh/rest/services/Test/MM_Stationing_Test/MapServer/1",
+      "https://maps.udot.utah.gov/randh/rest/services/PrimaryRoutes/MapServer/0",
     definitionExpression: "ROUTE_TYPE =  'M'",
   });
 
@@ -231,42 +230,41 @@ require([
       y: event.mapPoint.latitude,
     });
 
-    convertSR(mapPoint).then((projectedPoint) => {
-      const buffer = geometryEngine.buffer(projectedPoint, 200, "feet");
-      bufferLayer.removeAll();
-      selectionLayer.removeAll();
+    //
+    const buffer = geometryEngine.geodesicBuffer(mapPoint, 200, "feet");
+    bufferLayer.removeAll();
+    selectionLayer.removeAll();
 
-      bufferLayer.add(new Graphic({ geometry: buffer, symbol: fillSymbol }));
-      let query = {
-        geometry: buffer,
-        spatialRelationship: "intersects",
-        returnGeometry: true,
-        outFields: ["*"],
-      };
-      routesLayer.queryFeatures(query).then(function (results) {
-        if (results.features.length > 0) {
-          let intersect = geometryEngine.intersect(
-            results.features[0].geometry,
-            buffer
-          );
-          let nearestPoint = geometryEngine.nearestVertex(
-            intersect,
-            projectedPoint
-          );
+    bufferLayer.add(new Graphic({ geometry: buffer, symbol: fillSymbol }));
+    let query = {
+      geometry: buffer,
+      spatialRelationship: "intersects",
+      returnGeometry: true,
+      outFields: ["*"],
+    };
+    routesLayer.queryFeatures(query).then(function (results) {
+      if (results.features.length > 0) {
+        let intersect = geometryEngine.intersect(
+          results.features[0].geometry,
+          buffer
+        );
+        let rId = results.features[0].attributes.ROUTE_ID;
+        let nearestPoint = geometryEngine.nearestVertex(intersect, mapPoint);
 
-          let res = new Point({
-            spatialReference: NAD83,
-            y: nearestPoint.coordinate.y,
-            x: nearestPoint.coordinate.x,
-          });
+        let res = new Point({
+          y: nearestPoint.coordinate.y,
+          x: nearestPoint.coordinate.x,
+        });
 
-          selectionLayer.add(
-            new Graphic({ geometry: res, symbol: selectSymbol })
-          );
+        selectionLayer.add(
+          new Graphic({ geometry: res, symbol: selectSymbol })
+        );
+        console.log();
 
+        convertSR(res).then((projectedPoint) => {
           let options = {
             query: {
-              locations: `[{"routeId" : "", "geometry" : { "x" : ${res.x}, "y" : ${res.y} }}]`,
+              locations: `[{"routeId" : "${rId}", "geometry" : { "x" : ${projectedPoint.x}, "y" : ${projectedPoint.y} }}]`,
               inSR: 26912,
               outSR: 4326,
               f: "json",
@@ -275,23 +273,22 @@ require([
           };
 
           makeRequest(options, "geometryToStation");
-        }
-      });
+        });
+      }
     });
   });
 
-  
-
-  
-  openRoadview.addEventListener("click", function(){
-    
-    const url = `https://roadview.udot.utah.gov/utah/rvxsearch.php?Route=${exrouteId.value.substring(0,5)}&Mile=${exMeasure.value}`;
+  openRoadview.addEventListener("click", function () {
+    const url = `https://roadview.udot.utah.gov/utah/rvxsearch.php?Route=${exrouteId.value.substring(
+      0,
+      5
+    )}&Mile=${exMeasure.value}`;
     window.open(url, "_blank");
   });
-   openGoogleStreet. addEventListener("click", function(){
-     const url = `https://maps.google.com/maps?q=&layer=c&ll=${exLat.value},${exLon.value}&cbll=${exLat.value},${exLon.value}&cbp=11,0,0,0,0`
-     window.open(url, "_blank");
-   });
+  openGoogleStreet.addEventListener("click", function () {
+    const url = `https://maps.google.com/maps?q=&layer=c&ll=${exLat.value},${exLon.value}&cbll=${exLat.value},${exLon.value}&cbp=11,0,0,0,0`;
+    window.open(url, "_blank");
+  });
 
   getStation.addEventListener("click", function () {
     /**listener for the 'Coordinates" portion of the Coordinates
@@ -310,7 +307,7 @@ require([
     };
     makeRequest(options, "measureToGeometry");
   });
-
+  ("");
   getMP.addEventListener("click", function (btn) {
     /**listener for the 'Stationing" portion of the Coordinates
      * fetches values from form and adds them to the options for the REST API Call
@@ -336,11 +333,13 @@ require([
 
   const urls = {
     measureToGeometry:
-      "https://maps.udot.utah.gov/randh/rest/services/ALRS/MapServer/exts/LRSServer/networkLayers/0/measureToGeometry",
+      "https://maps.udot.utah.gov/randh/rest/services/ALRS_RP_Stationing/MapServer/exts/LRSServer/networkLayers/1/measureToGeometry",
     stationToGeometry:
-      "https://maps.udot.utah.gov/randh/rest/services/Test/MM_Stationing_Test/MapServer/exts/LRSServer/eventLayers/0/stationToGeometry",
+      "https://maps.udot.utah.gov/randh/rest/services/ALRS_RP_Stationing/MapServer/exts/LRSServer/eventLayers/0/stationToGeometry",
     geometryToStation:
-      "https://maps.udot.utah.gov/randh/rest/services/Test/MM_Stationing_Test/MapServer/exts/LRSServer/eventLayers/0/geometryToStation",
+      "https://maps.udot.utah.gov/randh/rest/services/ALRS_RP_Stationing/MapServer/exts/LRSServer/eventLayers/0/geometryToStation",
+    concurrencies:
+      "https://maps.udot.utah.gov/randh/rest/services/ALRS_RP_Stationing/MapServer/exts/LRSServer/networkLayers/1/concurrencies",
   };
   function makeRequest(options, type) {
     /**Takes in REST Call options and which type,
@@ -363,22 +362,21 @@ require([
       measure = response["data"]["locations"][0]["geometries"][0].m;
       x = response["data"]["locations"][0]["geometries"][0].x;
       y = response["data"]["locations"][0]["geometries"][0].y;
-      updateExternal(routeId, measure, y, x)
+      updateExternal("stationToGeometry", routeId, measure, y, x);
+
       updateForm(routeId, measure, false);
     } else if (type == "measureToGeometry") {
-
       x = response["data"]["locations"][0]["geometry"].x;
       y = response["data"]["locations"][0]["geometry"].y;
       measure = response["data"]["locations"][0]["geometry"].m;
       routeId = response["data"]["locations"][0].routeId;
-
       updateForm(routeId, measure, false);
-      updateExternal(routeId, measure, y, x)
+      updateExternal(routeId, measure, y, x);
 
       convertSR(new Point({ x: x, y: y })).then((r) => {
         let options = {
           query: {
-            locations: `[{"routeId" : ${routeID}, "geometry" : { "x" : ${r.x}, "y" : ${r.y} }}]`,
+            locations: `[{"routeId" : ${routeId}, "geometry" : { "x" : ${r.x}, "y" : ${r.y} }}]`,
             inSR: 26912,
             outSR: 4326,
             f: "json",
@@ -393,21 +391,21 @@ require([
       measure = response["data"]["locations"][0]["results"][0].geometry.m;
       x = response["data"]["locations"][0]["results"][0].geometry.x;
       y = response["data"]["locations"][0]["results"][0].geometry.y;
+
       updateForm(routeId, measure, station);
-      updateExternal(routeId, measure, y, x)
+      updateExternal(routeId, measure, y, x);
       highlightFilter(routeId, station);
     }
     zoomTo(x, y);
   }
 
   function updateExternal(routeId, measure, lat, lon) {
-
     if (routeId) {
       exrouteId.value = routeId;
     }
 
     if (measure) {
-      exMeasure.value = Number(measure.toFixed(7));
+      exMeasure.value = Number(measure).toFixed(7);
     }
     if (lat) {
       exLat.value = lat;
@@ -418,7 +416,6 @@ require([
   }
 
   function updateForm(routeId, measure, station) {
-    
     if (routeId) {
       rInput.value = routeId;
     }
