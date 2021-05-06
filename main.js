@@ -3,9 +3,8 @@
  * Zoom level
  *
  * handle errors in rest calls
- *  remove buffer on form submit
  * route_id < 1000
- * bring back points on click off line, remove point
+ * 
  * questions?
  * buffer size?
  *re-use of routeId/routeID is causing bugs
@@ -87,7 +86,7 @@ require([
   const routesLayer = new FeatureLayer({
     url:
       "https://maps.udot.utah.gov/randh/rest/services/PrimaryRoutes/MapServer/0",
-    definitionExpression: "ROUTE_TYPE =  'M'",
+    definitionExpression: "ROUTE_TYPE =  'M' AND ROUTE_ID < '1000PM'",
   });
 
   const stationLabel = new LabelClass({
