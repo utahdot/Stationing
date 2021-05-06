@@ -4,7 +4,7 @@
  *
  * handle errors in rest calls
  * add point on get REf Post/Linear Measure
- * select dominant route with concurrency
+
  *
  * questions?
  * buffer size?
@@ -300,7 +300,7 @@ require([
     let options = {
       query: {
         locations: `[{"routeId": ${routeID},"measure": ${measure}}]`,
-        outSR: 4326,
+        outSR: 26912,
         f: "json",
       },
       responseType: "json",
@@ -373,10 +373,10 @@ require([
       updateForm(routeId, measure, false);
       updateExternal(routeId, measure, y, x);
 
-      convertSR(new Point({ x: x, y: y })).then((r) => {
+     
         let options = {
           query: {
-            locations: `[{"routeId" : ${routeId}, "geometry" : { "x" : ${r.x}, "y" : ${r.y} }}]`,
+            locations: `[{"routeId" : ${routeId}, "geometry" : { "x" : ${x}, "y" : ${y} }}]`,
             inSR: 26912,
             outSR: 4326,
             f: "json",
@@ -384,7 +384,7 @@ require([
           responseType: "json",
         };
         makeRequest(options, "geometryToStation");
-      });
+      
     } else {
       station = response["data"]["locations"][0]["results"][0].station;
       routeId = response["data"]["locations"][0]["results"][0].routeId;
