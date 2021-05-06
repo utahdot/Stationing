@@ -3,7 +3,7 @@
  * Zoom level
  *
  * handle errors in rest calls
- * add point on get REf Post/Linear Measure
+ * add point on get Ref Post/Linear Measure
 
  *
  * questions?
@@ -204,12 +204,17 @@ require([
     };
   }
 
-  function convertSR(geometry) {
+  function convertSR(x,y) {
     /**Promise takes in latitude and longitude
      * converts to point geometry
      * projects to NAD83 Zone 12
      * TODO: make this just return the reprojected point
      */
+     let geometry = new Point({
+      y: y,
+      x: x,
+    });
+
     return new Promise((resolve) => {
       projection.load().then(function () {
         const projectedGeom = projection.project(geometry, NAD83);
@@ -233,7 +238,7 @@ require([
     //
     const buffer = geometryEngine.geodesicBuffer(mapPoint, 200, "feet");
     bufferLayer.removeAll();
-    selectionLayer.removeAll();
+    
 
     bufferLayer.add(new Graphic({ geometry: buffer, symbol: fillSymbol }));
     let query = {
@@ -249,19 +254,11 @@ require([
           buffer
         );
         let rId = results.features[0].attributes.ROUTE_ID;
-        let nearestPoint = geometryEngine.nearestVertex(intersect, mapPoint);
-
-        let res = new Point({
-          y: nearestPoint.coordinate.y,
-          x: nearestPoint.coordinate.x,
-        });
-
-        selectionLayer.add(
-          new Graphic({ geometry: res, symbol: selectSymbol })
-        );
-        console.log();
-
-        convertSR(res).then((projectedPoint) => {
+        let nearestPoint = geometryEngine.nearestCoordinate(intersect, mapPoint);
+          
+        addPoint(nearestPoint.coordinate.x, nearestPoint.coordinate.y);
+          
+        convertSR(nearestPoint.coordinate.x, nearestPoint.coordinate.y).then((projectedPoint) => {
           let options = {
             query: {
               locations: `[{"routeId" : "${rId}", "geometry" : { "x" : ${projectedPoint.x}, "y" : ${projectedPoint.y} }}]`,
@@ -363,6 +360,7 @@ require([
       x = response["data"]["locations"][0]["geometries"][0].x;
       y = response["data"]["locations"][0]["geometries"][0].y;
       updateExternal("stationToGeometry", routeId, measure, y, x);
+      addPoint(x, y);
 
       updateForm(routeId, measure, false);
     } else if (type == "measureToGeometry") {
@@ -391,12 +389,26 @@ require([
       measure = response["data"]["locations"][0]["results"][0].geometry.m;
       x = response["data"]["locations"][0]["results"][0].geometry.x;
       y = response["data"]["locations"][0]["results"][0].geometry.y;
-
+      addPoint(x, y);
       updateForm(routeId, measure, station);
       updateExternal(routeId, measure, y, x);
       highlightFilter(routeId, station);
     }
     zoomTo(x, y);
+  }
+
+  function addPoint(x, y){
+
+    selectionLayer.removeAll();
+    let res = new Point({
+      y: y,
+      x: x,
+    });
+
+    selectionLayer.add(
+      new Graphic({ geometry: res, symbol: selectSymbol })
+    );
+
   }
 
   function updateExternal(routeId, measure, lat, lon) {
