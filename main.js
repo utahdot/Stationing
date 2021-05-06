@@ -3,9 +3,9 @@
  * Zoom level
  *
  * handle errors in rest calls
- * add point on get Ref Post/Linear Measure
-
- *
+ *  remove buffer on form submit
+ * route_id < 1000
+ * bring back points on click off line, remove point
  * questions?
  * buffer size?
  *re-use of routeId/routeID is causing bugs
@@ -189,19 +189,27 @@ require([
     stationLayerView = layer;
   });
 
-  function highlightFilter(route, station) {
-    station = splitstation(station);
-    let featureFilter = {
-      where: `STATION_LABEL = '${route}_${station}'`,
-    };
+  function highlightFilter(route="", station="") {
 
+    if(!route || !station){
+      stationLayerView.effect = {
+        filter: {
+          where: "1=1",
+        },
+        includeEffect: "opacity(100%)"
+      };
+    }else{
+    station = splitstation(station);
+   
     // set effect on excluded features
     // make them gray and transparent
-
     stationLayerView.effect = {
-      filter: featureFilter,
-      excludedEffect: "grayscale(60%) opacity(50%)",
+      filter: {
+        where: `STATION_LABEL = '${route}_${station}'`,
+      },
+      excludedEffect: "grayscale(60%) opacity(50%)"
     };
+  }
   }
 
   function convertSR(x,y) {
@@ -271,6 +279,10 @@ require([
 
           makeRequest(options, "geometryToStation");
         });
+      }else{
+        selectionLayer.removeAll();
+        highlightFilter();
+
       }
     });
   });
@@ -291,6 +303,7 @@ require([
     /**listener for the 'Coordinates" portion of the Coordinates
      * fetches values from form and adds them to the options for the REST API Call
      */
+     bufferLayer.removeAll();
     const routeID = rInput.value;
     const measure = mpInput.value;
 
@@ -305,10 +318,12 @@ require([
     makeRequest(options, "measureToGeometry");
   });
   ("");
-  getMP.addEventListener("click", function (btn) {
+
+  getMP.addEventListener("click", function () {
     /**listener for the 'Stationing" portion of the Coordinates
      * fetches values from form and adds them to the options for the REST API Call
      */
+     bufferLayer.removeAll();
     const station = sInput.value;
     const routeID = rInput.value;
 
@@ -342,7 +357,12 @@ require([
     /**Takes in REST Call options and which type,
      * based on which button was clicked i the form */
     esriRequest(urls[type], options).then(function (response) {
-      setResults(response, type);
+      if(response["data"]["locations"][0].status == "esriLocatingOK"){
+        setResults(response, type);
+      } else{
+        console.log(response["data"]["locations"][0].status)
+      }
+      
     });
   }
 
@@ -352,7 +372,7 @@ require([
      * sets to form
      * calls zoomTo, to center the map.
      */
-
+   
     let x, y, station, routeId, measure;
     if (type == "stationToGeometry") {
       routeId = response["data"]["locations"][0].routeId;
