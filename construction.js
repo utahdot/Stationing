@@ -12,6 +12,7 @@
  */
 
 require([
+  "esri/widgets/Locate",
   "esri/geometry/Polyline",
   "esri/widgets/BasemapGallery",
   "esri/layers/support/LabelClass",
@@ -29,6 +30,7 @@ require([
   "esri/geometry/projection",
   "esri/geometry/SpatialReference",
 ], function (
+  Locate,
   Polyline,
   BasemapGallery,
   LabelClass,
@@ -148,7 +150,15 @@ require([
     content: basemapGallery,
   });
 
-  view.ui.add([stationExpand, externalExpand], "top-left");
+  const locateWidget = new Locate({
+    view: view,   // Attaches the Locate button to the view
+    graphic: new Graphic({
+      symbol: { type: "simple-marker" }  // overwrites the default symbol used for the
+      // graphic placed at the location of the user when found
+    })
+  });
+
+  view.ui.add([locateWidget, stationExpand, externalExpand], "top-left");
   view.ui.add(basemapExpand, "top-right");
 
   stationLayer.when(() => {
