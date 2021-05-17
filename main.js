@@ -84,8 +84,7 @@ require([
   });
 
   const routesLayer = new FeatureLayer({
-    url:
-      "https://maps.udot.utah.gov/randh/rest/services/PrimaryRoutes/MapServer/0",
+    url: "https://maps.udot.utah.gov/randh/rest/services/PrimaryRoutes/MapServer/0",
     definitionExpression: "ROUTE_TYPE =  'M' AND ROUTE_ID < '1000PM'",
   });
 
@@ -107,8 +106,7 @@ require([
   });
 
   const stationLayer = new FeatureLayer({
-    url:
-      "https://maps.udot.utah.gov/randh/rest/services/Test/MM_Stationing_Test/MapServer/0",
+    url: "https://maps.udot.utah.gov/randh/rest/services/Test/MM_Stationing_Test/MapServer/0",
     labelingInfo: stationLabel,
   });
 
@@ -188,53 +186,44 @@ require([
     stationLayerView = layer;
   });
 
-  function highlightFilter(route="", station="") {
-
-    if(!route || !station){
+  function highlightFilter(route = "", station = "") {
+    if (!route || !station) {
       stationLayerView.effect = {
         filter: {
           where: "1=1",
         },
-        includeEffect: "opacity(100%)"
+        includeEffect: "opacity(100%)",
       };
-    }else{
-    station = splitstation(station);
-   
-    // set effect on excluded features
-    // make them gray and transparent
-    stationLayerView.effect = {
-      filter: {
-        where: `STATION_LABEL = '${route}_${station}'`,
-      },
-      excludedEffect: "grayscale(60%) opacity(50%)"
-    };
-  }
+    } else {
+      station = splitstation(station);
+
+      // set effect on excluded features
+      // make them gray and transparent
+      stationLayerView.effect = {
+        filter: {
+          where: `STATION_LABEL = '${route}_${station}'`,
+        },
+        excludedEffect: "grayscale(60%) opacity(50%)",
+      };
+    }
   }
 
- async function convertSR(x,y) {
+  async function convertSR(x, y) {
     /**Promise takes in latitude and longitude
      * converts to point geometry
      * projects to NAD83 Zone 12
      * TODO: make this just return the reprojected point
      */
-     let geometry = new Point({
-      y: y,
-      x: x,
-    });
+    let geometry = new Point({ y: y, x: x });
 
     await projection.load();
     const projectedGeom = projection.project(geometry, NAD83);
     return projectedGeom;
-    // return new Promise((resolve) => {
-    //   projection.load().then(function () {
-    //     const projectedGeom = projection.project(geometry, NAD83);
-
-    //     resolve(projectedGeom);
-    //   });
-    // });
   }
 
-  view.on("click", function (event) {
+  view.on("click", viewClick);
+
+  async function viewClick(event) {
     /**gets the coordinates of the spot you click in the map
      * converts those coordinates to NAD83
      * populates those coordinates in the stationing form
@@ -248,7 +237,6 @@ require([
     //
     const buffer = geometryEngine.geodesicBuffer(mapPoint, 200, "feet");
     bufferLayer.removeAll();
-    
 
     bufferLayer.add(new Graphic({ geometry: buffer, symbol: fillSymbol }));
     let query = {
@@ -257,37 +245,40 @@ require([
       returnGeometry: true,
       outFields: ["*"],
     };
-    routesLayer.queryFeatures(query).then(function (results) {
-      if (results.features.length > 0) {
-        let intersect = geometryEngine.intersect(
-          results.features[0].geometry,
-          buffer
-        );
-        let rId = results.features[0].attributes.ROUTE_ID;
-        let nearestPoint = geometryEngine.nearestCoordinate(intersect, mapPoint);
-          
-        addPoint(nearestPoint.coordinate.x, nearestPoint.coordinate.y);
-          
-        convertSR(nearestPoint.coordinate.x, nearestPoint.coordinate.y).then((projectedPoint) => {
-          let options = {
-            query: {
-              locations: `[{"routeId" : "${rId}", "geometry" : { "x" : ${projectedPoint.x}, "y" : ${projectedPoint.y} }}]`,
-              inSR: 26912,
-              outSR: 4326,
-              f: "json",
-            },
-            responseType: "json",
-          };
 
-          makeRequest(options, "geometryToStation");
-        });
-      }else{
-        selectionLayer.removeAll();
-        highlightFilter();
+    const results = await routesLayer.queryFeatures(query);
 
-      }
-    });
-  });
+    if (results.features.length > 0) {
+      let intersect = geometryEngine.intersect(
+        results.features[0].geometry,
+        buffer
+      );
+      let rId = results.features[0].attributes.ROUTE_ID;
+      let nearestPoint = geometryEngine.nearestCoordinate(intersect, mapPoint);
+
+      addPoint(nearestPoint.coordinate.x, nearestPoint.coordinate.y);
+
+      const projectedPoint = await convertSR(
+        nearestPoint.coordinate.x,
+        nearestPoint.coordinate.y
+      );
+
+      let options = {
+        query: {
+          locations: `[{"routeId" : "${rId}", "geometry" : { "x" : ${projectedPoint.x}, "y" : ${projectedPoint.y} }}]`,
+          inSR: 26912,
+          outSR: 4326,
+          f: "json",
+        },
+        responseType: "json",
+      };
+
+      makeRequest(options, "geometryToStation");
+    } else {
+      selectionLayer.removeAll();
+      highlightFilter();
+    }
+  }
 
   openRoadview.addEventListener("click", function () {
     const url = `https://roadview.udot.utah.gov/utah/rvxsearch.php?Route=${exrouteId.value.substring(
@@ -305,7 +296,7 @@ require([
     /**listener for the 'Coordinates" portion of the Coordinates
      * fetches values from form and adds them to the options for the REST API Call
      */
-     bufferLayer.removeAll();
+    bufferLayer.removeAll();
     const routeID = rInput.value;
     const measure = mpInput.value;
 
@@ -325,7 +316,7 @@ require([
     /**listener for the 'Stationing" portion of the Coordinates
      * fetches values from form and adds them to the options for the REST API Call
      */
-     bufferLayer.removeAll();
+    bufferLayer.removeAll();
     const station = sInput.value;
     const routeID = rInput.value;
 
@@ -355,17 +346,16 @@ require([
     concurrencies:
       "https://maps.udot.utah.gov/randh/rest/services/ALRS_RP_Stationing/MapServer/exts/LRSServer/networkLayers/1/concurrencies",
   };
-  function makeRequest(options, type) {
+  async function makeRequest(options, type) {
     /**Takes in REST Call options and which type,
      * based on which button was clicked i the form */
-    esriRequest(urls[type], options).then(function (response) {
-      if(response["data"]["locations"][0].status == "esriLocatingOK"){
+    const response = await esriRequest(urls[type], options)
+
+      if (response["data"]["locations"][0].status == "esriLocatingOK") {
         setResults(response, type);
-      } else{
-        console.log(response["data"]["locations"][0].status)
+      } else {
+        console.log(response["data"]["locations"][0].status);
       }
-      
-    });
   }
 
   function setResults(response, type) {
@@ -374,7 +364,7 @@ require([
      * sets to form
      * calls zoomTo, to center the map.
      */
-   
+
     let x, y, station, routeId, measure;
     if (type == "stationToGeometry") {
       routeId = response["data"]["locations"][0].routeId;
@@ -393,18 +383,16 @@ require([
       updateForm(routeId, measure, false);
       updateExternal(routeId, measure, y, x);
 
-     
-        let options = {
-          query: {
-            locations: `[{"routeId" : ${routeId}, "geometry" : { "x" : ${x}, "y" : ${y} }}]`,
-            inSR: 26912,
-            outSR: 4326,
-            f: "json",
-          },
-          responseType: "json",
-        };
-        makeRequest(options, "geometryToStation");
-      
+      let options = {
+        query: {
+          locations: `[{"routeId" : ${routeId}, "geometry" : { "x" : ${x}, "y" : ${y} }}]`,
+          inSR: 26912,
+          outSR: 4326,
+          f: "json",
+        },
+        responseType: "json",
+      };
+      makeRequest(options, "geometryToStation");
     } else {
       station = response["data"]["locations"][0]["results"][0].station;
       routeId = response["data"]["locations"][0]["results"][0].routeId;
@@ -419,18 +407,14 @@ require([
     zoomTo(x, y);
   }
 
-  function addPoint(x, y){
-
+  function addPoint(x, y) {
     selectionLayer.removeAll();
     let res = new Point({
       y: y,
       x: x,
     });
 
-    selectionLayer.add(
-      new Graphic({ geometry: res, symbol: selectSymbol })
-    );
-
+    selectionLayer.add(new Graphic({ geometry: res, symbol: selectSymbol }));
   }
 
   function updateExternal(routeId, measure, lat, lon) {
