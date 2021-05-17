@@ -3,7 +3,7 @@
  * Zoom level
  *
  * handle errors in rest calls
- * route_id < 1000
+
  * 
  * questions?
  * buffer size?
@@ -211,7 +211,7 @@ require([
   }
   }
 
-  function convertSR(x,y) {
+ async function convertSR(x,y) {
     /**Promise takes in latitude and longitude
      * converts to point geometry
      * projects to NAD83 Zone 12
@@ -222,13 +222,16 @@ require([
       x: x,
     });
 
-    return new Promise((resolve) => {
-      projection.load().then(function () {
-        const projectedGeom = projection.project(geometry, NAD83);
+    await projection.load();
+    const projectedGeom = projection.project(geometry, NAD83);
+    return projectedGeom;
+    // return new Promise((resolve) => {
+    //   projection.load().then(function () {
+    //     const projectedGeom = projection.project(geometry, NAD83);
 
-        resolve(projectedGeom);
-      });
-    });
+    //     resolve(projectedGeom);
+    //   });
+    // });
   }
 
   view.on("click", function (event) {
