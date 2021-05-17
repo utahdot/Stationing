@@ -2,13 +2,10 @@
  * pop-up
  * Zoom level
  *
- * handle errors in rest calls
-
  * 
  * questions?
  * buffer size?
  *re-use of routeId/routeID is causing bugs
- * vertex highlight? -> nearestpoint?
  *
  * refactor to factory functions probably
  *
