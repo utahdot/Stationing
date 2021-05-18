@@ -151,11 +151,11 @@ require([
   });
 
   const locateWidget = new Locate({
-    view: view,   // Attaches the Locate button to the view
+    view: view, // Attaches the Locate button to the view
     graphic: new Graphic({
-      symbol: { type: "simple-marker" }  // overwrites the default symbol used for the
+      symbol: { type: "simple-marker" }, // overwrites the default symbol used for the
       // graphic placed at the location of the user when found
-    })
+    }),
   });
 
   view.ui.add([locateWidget, stationExpand, externalExpand], "top-left");
@@ -220,11 +220,6 @@ require([
   }
 
   async function convertSR(x, y) {
-    /**Promise takes in latitude and longitude
-     * converts to point geometry
-     * projects to NAD83 Zone 12
-     * TODO: make this just return the reprojected point
-     */
     let geometry = new Point({ y: y, x: x });
 
     await projection.load();
@@ -234,28 +229,25 @@ require([
 
   view.on("click", viewClick);
 
-  async function viewClick(event) {
-    /**gets the coordinates of the spot you click in the map
-     * converts those coordinates to NAD83
-     * populates those coordinates in the stationing form
-     */
-
-    function getDistance(nearestPoint, event) {
-      const pointsLine = new Polyline({
-        paths: [
-          [nearestPoint.coordinate.x, nearestPoint.coordinate.y],
-          [event.mapPoint.longitude, event.mapPoint.latitude],
-        ],
-      });
-      offset.value = geometryEngine.geodesicLength(pointsLine, "feet")
-    }
-
+  function viewClick(event) {
     let mapPoint = new Point({
       x: event.mapPoint.longitude,
       y: event.mapPoint.latitude,
     });
+    getRouteInfo(mapPoint);
+  }
 
-    //
+  async function getRouteInfo(mapPoint) {
+    function getDistance(nearestPoint, mapPoint) {
+      const pointsLine = new Polyline({
+        paths: [
+          [nearestPoint.coordinate.x, nearestPoint.coordinate.y],
+          [mapPoint.x, mapPoint.y],
+        ],
+      });
+      offset.value = geometryEngine.geodesicLength(pointsLine, "feet");
+    }
+
     const buffer = geometryEngine.geodesicBuffer(mapPoint, 200, "feet");
     bufferLayer.removeAll();
 
@@ -279,16 +271,13 @@ require([
 
       addPoint(nearestPoint.coordinate.x, nearestPoint.coordinate.y);
 
-      console.log(nearestPoint.distance);
-
       const projectedPoint = await convertSR(
         nearestPoint.coordinate.x,
         nearestPoint.coordinate.y
       );
 
-      
+      getDistance(nearestPoint, mapPoint);
 
-      console.log(getDistance(nearestPoint, event));
       let options = {
         query: {
           locations: `[{"routeId" : "${rId}", "geometry" : { "x" : ${projectedPoint.x}, "y" : ${projectedPoint.y} }}]`,
@@ -317,6 +306,20 @@ require([
     const url = `https://maps.google.com/maps?q=&layer=c&ll=${exLat.value},${exLon.value}&cbll=${exLat.value},${exLon.value}&cbp=11,0,0,0,0`;
     window.open(url, "_blank");
   });
+
+  getLocation.addEventListener("click", function(){
+    navigator.geolocation.getCurrentPosition(success, error);
+    function error() {
+      alert("Unable to retrieve your location");
+    }
+    function success(position) {
+      let mapPoint = new Point({
+        x: position.coords.longitude,
+        y: position.coords.latitude
+      });
+      getRouteInfo(mapPoint);
+    };
+  })
 
   getStation.addEventListener("click", function () {
     /**listener for the 'Coordinates" portion of the Coordinates
@@ -471,6 +474,18 @@ require([
     }
   }
 
+  view.when(() => {
+    function error() {
+      alert("Unable to retrieve your location");
+    }
+    function success(position) {
+      const latitude = position.coords.latitude;
+      const longitude = position.coords.longitude;
+      zoomTo(longitude, latitude);
+    }
+    navigator.geolocation.getCurrentPosition(success, error);
+  });
+
   function zoomTo(x, y) {
     view
       .goTo({
@@ -481,5 +496,6 @@ require([
           console.error(error);
         }
       });
+    view.zoom = 18;
   }
 });
