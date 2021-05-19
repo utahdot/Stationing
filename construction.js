@@ -1,13 +1,10 @@
 /**todo
- * pop-up
- * Zoom level
+ * 
+ * 
  *
- *
- * questions?
- * buffer size?
- *re-use of routeId/routeID is causing bugs
- *
- * refactor to factory functions probably
+ * copy to clip board
+ * point of user location/click?
+ * instructions modal
  *
  */
 
@@ -224,10 +221,12 @@ require([
       x: event.mapPoint.longitude,
       y: event.mapPoint.latitude,
     });
+    
     getRouteInfo(mapPoint);
   }
 
   async function getRouteInfo(mapPoint) {
+    selectionLayer.removeAll();
     function getDistance(nearestPoint, mapPoint) {
       const pointsLine = new Polyline({
         paths: [
@@ -250,7 +249,7 @@ require([
     };
 
     const results = await routesLayer.queryFeatures(query);
-
+    addPoint(mapPoint.x, mapPoint.y);
     if (results.features.length > 0) {
       let intersect = geometryEngine.intersect(
         results.features[0].geometry,
@@ -280,7 +279,7 @@ require([
 
       makeRequest(options, "geometryToStation");
     } else {
-      selectionLayer.removeAll();
+      //selectionLayer.removeAll();
       highlightFilter();
     }
   }
@@ -427,7 +426,6 @@ require([
   }
 
   function addPoint(x, y) {
-    selectionLayer.removeAll();
     let res = new Point({
       y: y,
       x: x,
