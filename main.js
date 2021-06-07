@@ -1,17 +1,16 @@
 /**todo
- * pop-up
- * Zoom level
- *
  * 
- * questions?
- * buffer size?
- *re-use of routeId/routeID is causing bugs
+ * 
  *
- * refactor to factory functions probably
+ * copy to clip board
+ * point of user location/click?
+ * instructions modal
+ *re-use of routeId/routeID is causing bugs
  *
  */
 
-require([
+ require([
+  "esri/geometry/Polyline",
   "esri/widgets/BasemapGallery",
   "esri/layers/support/LabelClass",
   "esri/Graphic",
@@ -28,6 +27,7 @@ require([
   "esri/geometry/projection",
   "esri/geometry/SpatialReference",
 ], function (
+  Polyline,
   BasemapGallery,
   LabelClass,
   Graphic,
@@ -50,6 +50,7 @@ require([
   const rInput = document.getElementById("routeID");
   const stationingForm = document.getElementById("stationingForm");
   const externalLinks = document.getElementById("extrnalLinks");
+  const offset = document.getElementById("offset");
 
   const exMeasure = document.querySelector("#exMeasure");
   const exLat = document.querySelector("#exLat");
@@ -60,6 +61,7 @@ require([
 
   let maxRouteStation = {};
   const NAD83 = new SpatialReference({ wkid: 26912 });
+
   // Layers
   let bufferLayer = new GraphicsLayer();
   let selectionLayer = new GraphicsLayer();
@@ -206,11 +208,6 @@ require([
   }
 
   async function convertSR(x, y) {
-    /**Promise takes in latitude and longitude
-     * converts to point geometry
-     * projects to NAD83 Zone 12
-     * TODO: make this just return the reprojected point
-     */
     let geometry = new Point({ y: y, x: x });
 
     await projection.load();
@@ -220,18 +217,27 @@ require([
 
   view.on("click", viewClick);
 
-  async function viewClick(event) {
-    /**gets the coordinates of the spot you click in the map
-     * converts those coordinates to NAD83
-     * populates those coordinates in the stationing form
-     */
-
+  function viewClick(event) {
     let mapPoint = new Point({
       x: event.mapPoint.longitude,
       y: event.mapPoint.latitude,
     });
+    
+    getRouteInfo(mapPoint);
+  }
 
-    //
+  async function getRouteInfo(mapPoint) {
+    selectionLayer.removeAll();
+    function getDistance(nearestPoint, mapPoint) {
+      const pointsLine = new Polyline({
+        paths: [
+          [nearestPoint.coordinate.x, nearestPoint.coordinate.y],
+          [mapPoint.x, mapPoint.y],
+        ],
+      });
+      offset.value = geometryEngine.geodesicLength(pointsLine, "feet");
+    }
+
     const buffer = geometryEngine.geodesicBuffer(mapPoint, 200, "feet");
     bufferLayer.removeAll();
 
@@ -244,7 +250,7 @@ require([
     };
 
     const results = await routesLayer.queryFeatures(query);
-
+    addPoint(mapPoint.x, mapPoint.y);
     if (results.features.length > 0) {
       let intersect = geometryEngine.intersect(
         results.features[0].geometry,
@@ -260,6 +266,8 @@ require([
         nearestPoint.coordinate.y
       );
 
+      getDistance(nearestPoint, mapPoint);
+
       let options = {
         query: {
           locations: `[{"routeId" : "${rId}", "geometry" : { "x" : ${projectedPoint.x}, "y" : ${projectedPoint.y} }}]`,
@@ -272,7 +280,7 @@ require([
 
       makeRequest(options, "geometryToStation");
     } else {
-      selectionLayer.removeAll();
+      //selectionLayer.removeAll();
       highlightFilter();
     }
   }
@@ -288,6 +296,20 @@ require([
     const url = `https://maps.google.com/maps?q=&layer=c&ll=${exLat.value},${exLon.value}&cbll=${exLat.value},${exLon.value}&cbp=11,0,0,0,0`;
     window.open(url, "_blank");
   });
+
+  getLocation.addEventListener("click", function(){
+    navigator.geolocation.getCurrentPosition(success, error);
+    function error() {
+      alert("Unable to retrieve your location");
+    }
+    function success(position) {
+      let mapPoint = new Point({
+        x: position.coords.longitude,
+        y: position.coords.latitude
+      });
+      getRouteInfo(mapPoint);
+    };
+  })
 
   getStation.addEventListener("click", function () {
     /**listener for the 'Coordinates" portion of the Coordinates
@@ -346,13 +368,13 @@ require([
   async function makeRequest(options, type) {
     /**Takes in REST Call options and which type,
      * based on which button was clicked i the form */
-    const response = await esriRequest(urls[type], options)
+    const response = await esriRequest(urls[type], options);
 
-      if (response["data"]["locations"][0].status == "esriLocatingOK") {
-        setResults(response, type);
-      } else {
-        console.log(response["data"]["locations"][0].status);
-      }
+    if (response["data"]["locations"][0].status == "esriLocatingOK") {
+      setResults(response, type);
+    } else {
+      console.log(response["data"]["locations"][0].status);
+    }
   }
 
   function setResults(response, type) {
@@ -405,7 +427,6 @@ require([
   }
 
   function addPoint(x, y) {
-    selectionLayer.removeAll();
     let res = new Point({
       y: y,
       x: x,
@@ -442,6 +463,18 @@ require([
     }
   }
 
+  view.when(() => {
+    function error() {
+      alert("Unable to retrieve your location");
+    }
+    function success(position) {
+      const latitude = position.coords.latitude;
+      const longitude = position.coords.longitude;
+      zoomTo(longitude, latitude);
+    }
+    navigator.geolocation.getCurrentPosition(success, error);
+  });
+
   function zoomTo(x, y) {
     view
       .goTo({
@@ -452,5 +485,6 @@ require([
           console.error(error);
         }
       });
+    view.zoom = 18;
   }
 });

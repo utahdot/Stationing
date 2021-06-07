@@ -5,6 +5,7 @@
  * copy to clip board
  * point of user location/click?
  * instructions modal
+ *re-use of routeId/routeID is causing bugs
  *
  */
 
