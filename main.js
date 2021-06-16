@@ -1,9 +1,14 @@
 /**todo
  * 
- * 
+ * reset graphics and offset on form click
  *
+ * clear form except route on click away
+ * 
+ * get measure if there is no reference post?
+ * 
+ * populate drop down with routes layer
+ * 
  * copy to clip board
- * point of user location/click?
  * instructions modal
  *re-use of routeId/routeID is causing bugs
  *
@@ -59,7 +64,7 @@
   const openGoogleStreet = document.querySelector("#openGoogleStreet");
   const exrouteId = document.querySelector("#exrouteId");
 
-  let maxRouteStation = {};
+  let  routeList = [] ;
   const NAD83 = new SpatialReference({ wkid: 26912 });
 
   // Layers
@@ -104,9 +109,20 @@
     labelPlacement: "center-center",
   });
 
+  const refSymbol = {
+    type: "picture-marker",  // autocasts as new PictureMarkerSymbol()
+    url: "https://maps.udot.utah.gov/uplan_data/documents/UPlanIcons/RPblankmed_edit.png",
+    width: "40px",
+    height: "40px",
+  };
+
   const stationLayer = new FeatureLayer({
     url: "https://maps.udot.utah.gov/randh/rest/services/Test/MM_Stationing_Test/MapServer/0",
     labelingInfo: stationLabel,
+    renderer: {
+          type: 'simple',
+          symbol: refSymbol
+        }
   });
 
   const map = new Map({
@@ -151,33 +167,29 @@
 
   stationLayer.when(() => {
     /**query the StationLayer to get a feature set */
-    stationLayer.queryFeatures().then((res) => getMaxStation(res.features));
+    stationLayer.queryFeatures().then((res) => makeRouteList(res.features));
   });
 
-  function getMaxStation(features) {
+  function makeRouteList(features) {
     /**takes in feature set and interates through to get the largest Station for each */
     features.forEach((feature) => {
       let routeId = feature.attributes.ROUTE_ID;
-      let legend = parseInt(feature.attributes.LEGEND);
-      if (maxRouteStation[routeId]) {
-        if (legend > maxRouteStation[routeId]) {
-          maxRouteStation[routeId] = legend;
-        }
-      } else {
-        maxRouteStation[routeId] = legend;
-      }
+      if (!routeList.includes(routeId)) {
+          routeList.push(routeId)
+      } 
     });
-    populateRoutes(maxRouteStation);
+    populateRoutes(routeList.sort());
   }
 
-  function populateRoutes(maxStation) {
+  function populateRoutes(routes) {
     /**takes in maxStation Object and creats an option foreach route entry */
-    for (let key in maxStation) {
+    
+    routes.forEach((route) => {
       const opt = document.createElement("option");
-      opt.value = key;
-      opt.innerHTML = key;
+      opt.value = route;
+      opt.innerHTML = route;
       rInput.appendChild(opt);
-    }
+    });
   }
 
   let stationLayerView;
