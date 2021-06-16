@@ -1,6 +1,6 @@
 /**todo
  * 
- * reset graphics and offset on form click
+ * reset offset on form click
  *
  * clear form except route on click away
  * 
@@ -292,7 +292,6 @@
 
       makeRequest(options, "geometryToStation");
     } else {
-      //selectionLayer.removeAll();
       highlightFilter();
     }
   }
@@ -328,6 +327,8 @@
      * fetches values from form and adds them to the options for the REST API Call
      */
     bufferLayer.removeAll();
+    selectionLayer.removeAll();
+    offset.value = 0;
     const routeID = rInput.value;
     const measure = mpInput.value;
 
@@ -348,6 +349,8 @@
      * fetches values from form and adds them to the options for the REST API Call
      */
     bufferLayer.removeAll();
+    selectionLayer.removeAll();
+    offset.value = 0;
     const station = sInput.value;
     const routeID = rInput.value;
 
