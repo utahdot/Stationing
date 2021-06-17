@@ -378,6 +378,8 @@
       "https://maps.udot.utah.gov/randh/rest/services/ALRS_RP_Stationing/MapServer/exts/LRSServer/eventLayers/0/geometryToStation",
     concurrencies:
       "https://maps.udot.utah.gov/randh/rest/services/ALRS_RP_Stationing/MapServer/exts/LRSServer/networkLayers/1/concurrencies",
+      geometryToMeasure:
+      "https://maps.udot.utah.gov/randh/rest/services/ALRS/MapServer/exts/LRSServer/networkLayers/0/geometryToMeasure"
   };
   async function makeRequest(options, type) {
     /**Takes in REST Call options and which type,
@@ -386,8 +388,20 @@
 
     if (response["data"]["locations"][0].status == "esriLocatingOK") {
       setResults(response, type);
-    } else {
-      console.log(response["data"]["locations"][0].status);
+    } else if(type != "geometryToMeasure") {
+      let locations = JSON.parse(options.query.locations)[0]
+      let newOptions = {
+        query: {
+          locations: `[{"routeId" : ${locations.routeId}, "geometry" : { "x" : ${locations.geometry.x}, "y" : ${locations.geometry.y} }}]`,
+          inSR: 26912,
+          outSR: 4326,
+          f: "json",
+        },
+        responseType: "json",
+      };
+      makeRequest(newOptions, "geometryToMeasure")
+    } else{
+      console.log(response["data"]["locations"][0].status, type);
     }
   }
 
@@ -404,18 +418,23 @@
       measure = response["data"]["locations"][0]["geometries"][0].m;
       x = response["data"]["locations"][0]["geometries"][0].x;
       y = response["data"]["locations"][0]["geometries"][0].y;
-      updateExternal("stationToGeometry", routeId, measure, y, x);
       addPoint(x, y);
-
       updateForm(routeId, measure, false);
-    } else if (type == "measureToGeometry") {
+    } else if (type == "geometryToMeasure"){
+      console.log(response)
+      x = response["data"]["locations"][0]["results"][0]["geometry"].x;
+      y = response["data"]["locations"][0]["results"][0]["geometry"].y;
+      measure = response["data"]["locations"][0]["results"][0].measure;
+      routeId = response["data"]["locations"][0]["results"][0].routeId;
+      updateForm(routeId, measure, "0+00");
+     
+    }else if (type == "measureToGeometry") {
       x = response["data"]["locations"][0]["geometry"].x;
       y = response["data"]["locations"][0]["geometry"].y;
       measure = response["data"]["locations"][0]["geometry"].m;
       routeId = response["data"]["locations"][0].routeId;
       updateForm(routeId, measure, false);
-      updateExternal(routeId, measure, y, x);
-
+      
       let options = {
         query: {
           locations: `[{"routeId" : ${routeId}, "geometry" : { "x" : ${x}, "y" : ${y} }}]`,
@@ -427,6 +446,7 @@
       };
       makeRequest(options, "geometryToStation");
     } else {
+      
       station = response["data"]["locations"][0]["results"][0].station;
       routeId = response["data"]["locations"][0]["results"][0].routeId;
       measure = response["data"]["locations"][0]["results"][0].geometry.m;
@@ -434,10 +454,11 @@
       y = response["data"]["locations"][0]["results"][0].geometry.y;
       addPoint(x, y);
       updateForm(routeId, measure, station);
-      updateExternal(routeId, measure, y, x);
+      
       highlightFilter(routeId, station);
     }
     zoomTo(x, y);
+    updateExternal(routeId, measure, y, x);
   }
 
   function addPoint(x, y) {
