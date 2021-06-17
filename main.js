@@ -1,12 +1,9 @@
 /**todo
  * 
- * reset offset on form click
  *
- * clear form except route on click away
  * 
  * get measure if there is no reference post?
  * 
- * populate drop down with routes layer
  * 
  * copy to clip board
  * instructions modal
@@ -165,9 +162,9 @@
   view.ui.add([stationExpand, externalExpand], "top-left");
   view.ui.add(basemapExpand, "top-right");
 
-  stationLayer.when(() => {
+  routesLayer.when(() => {
     /**query the StationLayer to get a feature set */
-    stationLayer.queryFeatures().then((res) => makeRouteList(res.features));
+    routesLayer.queryFeatures().then((res) => makeRouteList(res.features));
   });
 
   function makeRouteList(features) {
@@ -293,6 +290,8 @@
       makeRequest(options, "geometryToStation");
     } else {
       highlightFilter();
+      updateForm(false, 0, "0+00");
+      offset.value = 0;
     }
   }
 
@@ -470,7 +469,7 @@
     if (routeId) {
       rInput.value = routeId;
     }
-    if (measure) {
+    if (measure || measure === 0) {
       mpInput.value = Number(measure.toFixed(7));
     }
     if (station) {
