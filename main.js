@@ -260,6 +260,8 @@
 
     const results = await routesLayer.queryFeatures(query);
     addPoint(mapPoint.x, mapPoint.y);
+    updateExternal(false, false, mapPoint.y, mapPoint.x);
+
     if (results.features.length > 0) {
       let intersect = geometryEngine.intersect(
         results.features[0].geometry,
@@ -276,10 +278,10 @@
       );
 
       getDistance(nearestPoint, mapPoint);
-
+  
       let options = {
         query: {
-          locations: `[{"routeId" : "${rId}", "geometry" : { "x" : ${projectedPoint.x}, "y" : ${projectedPoint.y} }}]`,
+          locations: `[{"routeid" : "${rId}", "geometry" : { "x" : ${projectedPoint.x}, "y" : ${projectedPoint.y}}}]`,
           inSR: 26912,
           outSR: 4326,
           f: "json",
@@ -375,7 +377,8 @@
     stationToGeometry:
       "https://maps.udot.utah.gov/randh/rest/services/ALRS_RP_Stationing/MapServer/exts/LRSServer/eventLayers/0/stationToGeometry",
     geometryToStation:
-      "https://maps.udot.utah.gov/randh/rest/services/ALRS_RP_Stationing/MapServer/exts/LRSServer/eventLayers/0/geometryToStation",
+      //"https://maps.udot.utah.gov/randh/rest/services/ALRS_RP_Stationing/MapServer/exts/LRSServer/eventLayers/0/geometryToStation",
+      "https://maps.udot.utah.gov/randh/rest/services/Public/Points2RefPost/GPServer/Points2RefPost/execute",
     concurrencies:
       "https://maps.udot.utah.gov/randh/rest/services/ALRS_RP_Stationing/MapServer/exts/LRSServer/networkLayers/1/concurrencies",
       geometryToMeasure:
@@ -385,8 +388,7 @@
     /**Takes in REST Call options and which type,
      * based on which button was clicked i the form */
     const response = await esriRequest(urls[type], options);
-
-    if (response["data"]["locations"][0].status == "esriLocatingOK") {
+    if (type = "geometryToStation" || response["data"]["locations"][0].status == "esriLocatingOK") {
       setResults(response, type);
     } else if(type != "geometryToMeasure") {
       let locations = JSON.parse(options.query.locations)[0]
@@ -421,7 +423,7 @@
       addPoint(x, y);
       updateForm(routeId, measure, false);
     } else if (type == "geometryToMeasure"){
-      console.log(response)
+      
       x = response["data"]["locations"][0]["results"][0]["geometry"].x;
       y = response["data"]["locations"][0]["results"][0]["geometry"].y;
       measure = response["data"]["locations"][0]["results"][0].measure;
@@ -437,7 +439,7 @@
       
       let options = {
         query: {
-          locations: `[{"routeId" : ${routeId}, "geometry" : { "x" : ${x}, "y" : ${y} }}]`,
+          locations: `[{"routeId" : ${routeId}, "geometry" : { "x" : ${x}, "y" : ${y}}}]`,
           inSR: 26912,
           outSR: 4326,
           f: "json",
@@ -446,12 +448,13 @@
       };
       makeRequest(options, "geometryToStation");
     } else {
-      
-      station = response["data"]["locations"][0]["results"][0].station;
-      routeId = response["data"]["locations"][0]["results"][0].routeId;
-      measure = response["data"]["locations"][0]["results"][0].geometry.m;
-      x = response["data"]["locations"][0]["results"][0].geometry.x;
-      y = response["data"]["locations"][0]["results"][0].geometry.y;
+      console.log(response);
+      station = response["data"]["results"][0]["value"]["results"][0].stationid;
+      routeId = response["data"]["results"][0]["value"]["results"][0].routeid;
+      measure = response["data"]["results"][0]["value"]["results"][0].measure;
+      console.log(routeId, measure, station);
+      y = exLat.value;
+      x = exLon.value;
       addPoint(x, y);
       updateForm(routeId, measure, station);
       
@@ -461,7 +464,7 @@
     updateExternal(routeId, measure, y, x);
   }
 
-  function addPoint(x, y) {
+  function addPoint(x, y) { 
     let res = new Point({
       y: y,
       x: x,
