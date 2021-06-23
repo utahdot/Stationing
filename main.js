@@ -3,7 +3,10 @@
  *
  * 
  * get measure if there is no reference post?
- * 
+ * click, linear measure discrepancy
+ * JSON parse error when clikc get linear measure?
+ * point not removed from map when click get RP adter a map click.
+ * choose P route when multiple routes in buffer
  * 
  * copy to clip board
  * instructions modal
@@ -63,6 +66,7 @@
 
   let  routeList = [] ;
   const NAD83 = new SpatialReference({ wkid: 26912 });
+  const WGS84 = new SpatialReference({ wkid: 4326 });
 
   // Layers
   let bufferLayer = new GraphicsLayer();
@@ -216,11 +220,13 @@
     }
   }
 
-  async function convertSR(x, y) {
-    let geometry = new Point({ y: y, x: x });
-
+  async function convertSR(x, y, inSR, outSR) {
+    let geometry = new Point({ y: y, x: x, spatialReference: inSR });
+    
     await projection.load();
-    const projectedGeom = projection.project(geometry, NAD83);
+    
+    const projectedGeom = projection.project(geometry, outSR);
+    
     return projectedGeom;
   }
 
@@ -274,7 +280,9 @@
 
       const projectedPoint = await convertSR(
         nearestPoint.coordinate.x,
-        nearestPoint.coordinate.y
+        nearestPoint.coordinate.y,
+        WGS84,
+        NAD83
       );
 
       getDistance(nearestPoint, mapPoint);
@@ -388,7 +396,8 @@
     /**Takes in REST Call options and which type,
      * based on which button was clicked i the form */
     const response = await esriRequest(urls[type], options);
-    if (type = "geometryToStation" || response["data"]["locations"][0].status == "esriLocatingOK") {
+    console.log(response);
+    if (type == "geometryToStation" || response["data"]["locations"][0].status == "esriLocatingOK") {
       setResults(response, type);
     } else if(type != "geometryToMeasure") {
       let locations = JSON.parse(options.query.locations)[0]
@@ -407,7 +416,7 @@
     }
   }
 
-  function setResults(response, type) {
+  async function setResults(response, type) {
     /**takes results of rest call
      * gets the x/y and route/station depending on call type
      * sets to form
@@ -422,24 +431,35 @@
       y = response["data"]["locations"][0]["geometries"][0].y;
       addPoint(x, y);
       updateForm(routeId, measure, false);
+      zoomTo(x, y);
+      updateExternal(routeId, measure, y, x);
+
     } else if (type == "geometryToMeasure"){
-      
       x = response["data"]["locations"][0]["results"][0]["geometry"].x;
       y = response["data"]["locations"][0]["results"][0]["geometry"].y;
       measure = response["data"]["locations"][0]["results"][0].measure;
       routeId = response["data"]["locations"][0]["results"][0].routeId;
       updateForm(routeId, measure, "0+00");
+      zoomTo(x, y);
+      console.log("hi")
+      updateExternal(routeId, measure, y, x);
      
     }else if (type == "measureToGeometry") {
       x = response["data"]["locations"][0]["geometry"].x;
       y = response["data"]["locations"][0]["geometry"].y;
       measure = response["data"]["locations"][0]["geometry"].m;
-      routeId = response["data"]["locations"][0].routeId;
-      updateForm(routeId, measure, false);
-      
+      routeId = response["data"]["locations"][0].routeId;      
+       const projectedPoint = await convertSR(
+        x,
+        y,
+        NAD83,
+        WGS84
+      );
+        addPoint(projectedPoint.x, projectedPoint.y);
+        zoomTo(projectedPoint.x, projectedPoint.y)
       let options = {
         query: {
-          locations: `[{"routeId" : ${routeId}, "geometry" : { "x" : ${x}, "y" : ${y}}}]`,
+          locations: `[{"routeid" : "${routeId}", "geometry" : { "x" : ${x}, "y" : ${y}}}]`,
           inSR: 26912,
           outSR: 4326,
           f: "json",
@@ -448,7 +468,6 @@
       };
       makeRequest(options, "geometryToStation");
     } else {
-      console.log(response);
       station = response["data"]["results"][0]["value"]["results"][0].stationid;
       routeId = response["data"]["results"][0]["value"]["results"][0].routeid;
       measure = response["data"]["results"][0]["value"]["results"][0].measure;
@@ -458,11 +477,13 @@
       addPoint(x, y);
       updateForm(routeId, measure, station);
       
+      updateExternal(routeId, measure, y, x);
       highlightFilter(routeId, station);
     }
-    zoomTo(x, y);
-    updateExternal(routeId, measure, y, x);
+
   }
+
+  
 
   function addPoint(x, y) { 
     let res = new Point({
