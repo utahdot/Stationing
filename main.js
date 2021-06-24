@@ -1,20 +1,20 @@
 /**todo
- * 
  *
- * 
+ *
+ *
  * get measure if there is no reference post?
  * click, linear measure discrepancy
- * JSON parse error when clikc get linear measure?
- * point not removed from map when click get RP adter a map click.
- * choose P route when multiple routes in buffer
  * 
+ * point not removed from map when click get RP adter a map click.
+
+ *
  * copy to clip board
  * instructions modal
  *re-use of routeId/routeID is causing bugs
  *
  */
 
- require([
+require([
   "esri/geometry/Polyline",
   "esri/widgets/BasemapGallery",
   "esri/layers/support/LabelClass",
@@ -64,7 +64,7 @@
   const openGoogleStreet = document.querySelector("#openGoogleStreet");
   const exrouteId = document.querySelector("#exrouteId");
 
-  let  routeList = [] ;
+  let routeList = [];
   const NAD83 = new SpatialReference({ wkid: 26912 });
   const WGS84 = new SpatialReference({ wkid: 4326 });
 
@@ -87,11 +87,12 @@
       width: "2px",
     },
   });
-
+  let routesLayerView;
   const routesLayer = new FeatureLayer({
     url: "https://maps.udot.utah.gov/randh/rest/services/PrimaryRoutes/MapServer/0",
     definitionExpression: "ROUTE_TYPE =  'M' AND ROUTE_ID < '1000PM'",
   });
+
 
   const stationLabel = new LabelClass({
     labelExpressionInfo: { expression: "$feature.LEGEND" },
@@ -111,7 +112,7 @@
   });
 
   const refSymbol = {
-    type: "picture-marker",  // autocasts as new PictureMarkerSymbol()
+    type: "picture-marker", // autocasts as new PictureMarkerSymbol()
     url: "https://maps.udot.utah.gov/uplan_data/documents/UPlanIcons/RPblankmed_edit.png",
     width: "40px",
     height: "40px",
@@ -121,9 +122,9 @@
     url: "https://maps.udot.utah.gov/randh/rest/services/Test/MM_Stationing_Test/MapServer/0",
     labelingInfo: stationLabel,
     renderer: {
-          type: 'simple',
-          symbol: refSymbol
-        }
+      type: "simple",
+      symbol: refSymbol,
+    },
   });
 
   const map = new Map({
@@ -165,6 +166,9 @@
 
   view.ui.add([stationExpand, externalExpand], "top-left");
   view.ui.add(basemapExpand, "top-right");
+  view.whenLayerView(routesLayer).then(function(layer){
+    routesLayerView = layer;
+  });
 
   routesLayer.when(() => {
     /**query the StationLayer to get a feature set */
@@ -176,15 +180,15 @@
     features.forEach((feature) => {
       let routeId = feature.attributes.ROUTE_ID;
       if (!routeList.includes(routeId)) {
-          routeList.push(routeId)
-      } 
+        routeList.push(routeId);
+      }
     });
     populateRoutes(routeList.sort());
   }
 
   function populateRoutes(routes) {
     /**takes in maxStation Object and creats an option foreach route entry */
-    
+
     routes.forEach((route) => {
       const opt = document.createElement("option");
       opt.value = route;
@@ -222,11 +226,11 @@
 
   async function convertSR(x, y, inSR, outSR) {
     let geometry = new Point({ y: y, x: x, spatialReference: inSR });
-    
+
     await projection.load();
-    
+
     const projectedGeom = projection.project(geometry, outSR);
-    
+
     return projectedGeom;
   }
 
@@ -237,7 +241,7 @@
       x: event.mapPoint.longitude,
       y: event.mapPoint.latitude,
     });
-    
+
     getRouteInfo(mapPoint);
   }
 
@@ -258,6 +262,7 @@
 
     bufferLayer.add(new Graphic({ geometry: buffer, symbol: fillSymbol }));
     let query = {
+      where: "ROUTE_TYPE =  'M' AND ROUTE_ID < '1000PM'", 
       geometry: buffer,
       spatialRelationship: "intersects",
       returnGeometry: true,
@@ -267,13 +272,30 @@
     const results = await routesLayer.queryFeatures(query);
     addPoint(mapPoint.x, mapPoint.y);
     updateExternal(false, false, mapPoint.y, mapPoint.x);
-
+    let rId;
     if (results.features.length > 0) {
-      let intersect = geometryEngine.intersect(
-        results.features[0].geometry,
-        buffer
-      );
-      let rId = results.features[0].attributes.ROUTE_ID;
+      let intersect;
+      if (results.features.length > 1) {
+        console.log(results.features)
+        results.features.every((l) => {
+          console.log(l)
+          if (l.attributes.ROUTE_DIRECTION == "P") {
+            rId = l.attributes.ROUTE_ID;
+            intersect = geometryEngine.intersect(l.geometry, buffer);
+            return false;
+          };
+          return true;
+        });
+        
+      } else {
+        rId = results.features[0].attributes.ROUTE_ID;
+        intersect = geometryEngine.intersect(
+          results.features[0].geometry,
+          buffer
+        );
+      };
+
+      
       let nearestPoint = geometryEngine.nearestCoordinate(intersect, mapPoint);
 
       addPoint(nearestPoint.coordinate.x, nearestPoint.coordinate.y);
@@ -286,7 +308,7 @@
       );
 
       getDistance(nearestPoint, mapPoint);
-  
+
       let options = {
         query: {
           locations: `[{"routeid" : "${rId}", "geometry" : { "x" : ${projectedPoint.x}, "y" : ${projectedPoint.y}}}]`,
@@ -317,7 +339,7 @@
     window.open(url, "_blank");
   });
 
-  getLocation.addEventListener("click", function(){
+  getLocation.addEventListener("click", function () {
     navigator.geolocation.getCurrentPosition(success, error);
     function error() {
       alert("Unable to retrieve your location");
@@ -325,11 +347,11 @@
     function success(position) {
       let mapPoint = new Point({
         x: position.coords.longitude,
-        y: position.coords.latitude
+        y: position.coords.latitude,
       });
       getRouteInfo(mapPoint);
-    };
-  })
+    }
+  });
 
   getStation.addEventListener("click", function () {
     /**listener for the 'Coordinates" portion of the Coordinates
@@ -389,18 +411,21 @@
       "https://maps.udot.utah.gov/randh/rest/services/Public/Points2RefPost/GPServer/Points2RefPost/execute",
     concurrencies:
       "https://maps.udot.utah.gov/randh/rest/services/ALRS_RP_Stationing/MapServer/exts/LRSServer/networkLayers/1/concurrencies",
-      geometryToMeasure:
-      "https://maps.udot.utah.gov/randh/rest/services/ALRS/MapServer/exts/LRSServer/networkLayers/0/geometryToMeasure"
+    geometryToMeasure:
+      "https://maps.udot.utah.gov/randh/rest/services/ALRS/MapServer/exts/LRSServer/networkLayers/0/geometryToMeasure",
   };
   async function makeRequest(options, type) {
     /**Takes in REST Call options and which type,
      * based on which button was clicked i the form */
     const response = await esriRequest(urls[type], options);
-    console.log(response);
-    if (type == "geometryToStation" || response["data"]["locations"][0].status == "esriLocatingOK") {
+    console.log(response, options, type);
+    if (
+      type == "geometryToStation" ||
+      response["data"]["locations"][0].status == "esriLocatingOK"
+    ) {
       setResults(response, type);
-    } else if(type != "geometryToMeasure") {
-      let locations = JSON.parse(options.query.locations)[0]
+    } else if (type != "geometryToMeasure") {
+      let locations = JSON.parse(options.query.locations)[0];
       let newOptions = {
         query: {
           locations: `[{"routeId" : ${locations.routeId}, "geometry" : { "x" : ${locations.geometry.x}, "y" : ${locations.geometry.y} }}]`,
@@ -410,8 +435,8 @@
         },
         responseType: "json",
       };
-      makeRequest(newOptions, "geometryToMeasure")
-    } else{
+      makeRequest(newOptions, "geometryToMeasure");
+    } else {
       console.log(response["data"]["locations"][0].status, type);
     }
   }
@@ -433,30 +458,23 @@
       updateForm(routeId, measure, false);
       zoomTo(x, y);
       updateExternal(routeId, measure, y, x);
-
-    } else if (type == "geometryToMeasure"){
+    } else if (type == "geometryToMeasure") {
       x = response["data"]["locations"][0]["results"][0]["geometry"].x;
       y = response["data"]["locations"][0]["results"][0]["geometry"].y;
       measure = response["data"]["locations"][0]["results"][0].measure;
       routeId = response["data"]["locations"][0]["results"][0].routeId;
       updateForm(routeId, measure, "0+00");
       zoomTo(x, y);
-      console.log("hi")
+      console.log("hi");
       updateExternal(routeId, measure, y, x);
-     
-    }else if (type == "measureToGeometry") {
+    } else if (type == "measureToGeometry") {
       x = response["data"]["locations"][0]["geometry"].x;
       y = response["data"]["locations"][0]["geometry"].y;
       measure = response["data"]["locations"][0]["geometry"].m;
-      routeId = response["data"]["locations"][0].routeId;      
-       const projectedPoint = await convertSR(
-        x,
-        y,
-        NAD83,
-        WGS84
-      );
-        addPoint(projectedPoint.x, projectedPoint.y);
-        zoomTo(projectedPoint.x, projectedPoint.y)
+      routeId = response["data"]["locations"][0].routeId;
+      const projectedPoint = await convertSR(x, y, NAD83, WGS84);
+      addPoint(projectedPoint.x, projectedPoint.y);
+      zoomTo(projectedPoint.x, projectedPoint.y);
       let options = {
         query: {
           locations: `[{"routeid" : "${routeId}", "geometry" : { "x" : ${x}, "y" : ${y}}}]`,
@@ -476,16 +494,13 @@
       x = exLon.value;
       addPoint(x, y);
       updateForm(routeId, measure, station);
-      
+
       updateExternal(routeId, measure, y, x);
       highlightFilter(routeId, station);
     }
-
   }
 
-  
-
-  function addPoint(x, y) { 
+  function addPoint(x, y) {
     let res = new Point({
       y: y,
       x: x,
