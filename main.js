@@ -1,12 +1,9 @@
 /**todo
  *
  *
- *
- * get measure if there is no reference post?
- * click, linear measure discrepancy
- * 
- * point not removed from map when click get RP adter a map click.
-
+ * no ref post measure is right
+ * with ref post measure is wrong
+ * some locations there is an error? 
  *
  * copy to clip board
  * instructions modal
@@ -417,14 +414,16 @@ require([
   async function makeRequest(options, type) {
     /**Takes in REST Call options and which type,
      * based on which button was clicked i the form */
+    try{
     const response = await esriRequest(urls[type], options);
+  
     console.log(response, options, type);
     if (
       type == "geometryToStation" ||
       response["data"]["locations"][0].status == "esriLocatingOK"
     ) {
       setResults(response, type);
-    } else if (type != "geometryToMeasure") {
+    } else if (type == "geometryToMeasure") {
       let locations = JSON.parse(options.query.locations)[0];
       let newOptions = {
         query: {
@@ -439,6 +438,9 @@ require([
     } else {
       console.log(response["data"]["locations"][0].status, type);
     }
+  } catch (e){
+    console.log(e);
+  }
   }
 
   async function setResults(response, type) {
