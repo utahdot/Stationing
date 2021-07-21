@@ -1,11 +1,9 @@
 /**todo
  *
  *
- * no ref post measure is right
- * with ref post measure is wrong
- * some locations there is an error? 
+ * 0+00 on reference post for routes with no RP
  *
- * copy to clip board
+ * copy to clip board??
  * instructions modal
  *re-use of routeId/routeID is causing bugs
  *
@@ -405,8 +403,8 @@ require([
       "https://maps.udot.utah.gov/randh/rest/services/ALRS_RP_Stationing/MapServer/exts/LRSServer/eventLayers/0/stationToGeometry",
     geometryToStation:
       //"https://maps.udot.utah.gov/randh/rest/services/ALRS_RP_Stationing/MapServer/exts/LRSServer/eventLayers/0/geometryToStation",
-      //"https://maps.udot.utah.gov/randh/rest/services/Public/Points2RefPost/GPServer/Points2RefPost/execute",
-      "https://maps.udot.utah.gov/randh/rest/services/Public/Points2RefPost_test/GPServer/Points2RefPost/execute",
+      "https://maps.udot.utah.gov/randh/rest/services/Public/Points2RefPost/GPServer/Points2RefPost/execute",
+      // "https://maps.udot.utah.gov/randh/rest/services/Public/Points2RefPost_test/GPServer/Points2RefPost/execute",
     concurrencies:
       "https://maps.udot.utah.gov/randh/rest/services/ALRS_RP_Stationing/MapServer/exts/LRSServer/networkLayers/1/concurrencies",
     geometryToMeasure:
