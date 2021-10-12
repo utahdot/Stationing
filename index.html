@@ -23,17 +23,32 @@
             <section id="locations">
                 <legend>Locations</legend>
                 <label for="milepost">Linear Measure: </label>
-                <input type="text" name="milepost" id="milepost" value="288.5">
+                <input type="text" name="milepost" id="milepost" value="12.6">
                 <button name="getstation" id="getStation">
             Get Reference Post</button>
                 <label for="station">Reference Post: </label>
-                <input type="text" name="station" id="station" value="140+00.0671">
+                <input type="text" name="station" id="station" value="">
                 <button name="getMP" id="getMP">Get Linear Measure</button>
                 <label for="offet">Offset (feet): </label>
                 <input type="text" name="offset" id="offset" value="0" readonly>
                 <button name="getLocation" id="getLocation">Get Current Location</button>
             </section> 
-        </section>
+            <section id="stations">
+                <h2>Upstream Reference Post</h2>
+                <label for="upRouteID">Route ID:</label>
+                <input type="text" name="upRouteID" id="upRouteID" value="" readonly>
+                <label for="upMeasure">Measure:</label>
+                <input type="text" name="upMeasure" id="upMeasure" value="" readonly>
+                <label for="upStation">Station:</label>
+                <input type="text" name="upStation" id="upStation" value="" readonly>
+                <h2>Downstream Reference Post</h2>
+                <label for="dnRouteID">Route ID:</label>
+                <input type="text" name="dnRouteID" id="dnRouteID" value="" readonly>
+                <label for="dnMeasure">Measure:</label>
+                <input type="text" name="dnMeasure" id="dnMeasure" value="" readonly>
+                <label for="dnStation">Station:</label>
+                <input type="text" name="dnStation" id="dnStation" value="" readonly>
+            </section>
         </section>
         <section id="extrnalLinks" class="container esri-widget">
                 <legend>Locations</legend>

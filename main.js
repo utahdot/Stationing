@@ -48,6 +48,12 @@ require([
   const mpInput = document.getElementById("milepost");
   const sInput = document.getElementById("station");
   const rInput = document.getElementById("routeID");
+  const upRouteIDInput = document.getElementById("upRouteID");
+  const upMeasureInput = document.getElementById("upMeasure");
+  const upStationInput = document.getElementById("upStation");
+  const dnRouteIDInput = document.getElementById("dnRouteID");
+  const dnMeasureInput = document.getElementById("dnMeasure");
+  const dnStationInput = document.getElementById("dnStation");
   const stationingForm = document.getElementById("stationingForm");
   const externalLinks = document.getElementById("extrnalLinks");
   const offset = document.getElementById("offset");
@@ -403,7 +409,8 @@ require([
       "https://maps.udot.utah.gov/randh/rest/services/ALRS_RP_Stationing/MapServer/exts/LRSServer/eventLayers/0/stationToGeometry",
     geometryToStation:
       //"https://maps.udot.utah.gov/randh/rest/services/ALRS_RP_Stationing/MapServer/exts/LRSServer/eventLayers/0/geometryToStation",
-      "https://maps.udot.utah.gov/randh/rest/services/Public/Points2RefPost/GPServer/Points2RefPost/execute",
+      "https://transport.azure.esri-ps.com/server/rest/services/Points2RefPost/GPServer/Points2RefPost/execute",
+      //"https://maps.udot.utah.gov/randh/rest/services/Public/Points2RefPost/GPServer/Points2RefPost/execute",
       // "https://maps.udot.utah.gov/randh/rest/services/Public/Points2RefPost_test/GPServer/Points2RefPost/execute",
     concurrencies:
       "https://maps.udot.utah.gov/randh/rest/services/ALRS_RP_Stationing/MapServer/exts/LRSServer/networkLayers/1/concurrencies",
@@ -411,6 +418,8 @@ require([
       "https://maps.udot.utah.gov/randh/rest/services/ALRS/MapServer/exts/LRSServer/networkLayers/0/geometryToMeasure",
   };
   async function makeRequest(options, type) {
+    clearStations();
+    
     /**Takes in REST Call options and which type,
      * based on which button was clicked i the form */
     try{
@@ -449,7 +458,7 @@ require([
      * calls zoomTo, to center the map.
      */
 
-    let x, y, station, routeId, measure;
+    let x, y, routeId, measure, station, upStation, upRouteId, upMeasure, dnStation, dnRouteId, dnMeasure;
     if (type == "stationToGeometry") {
       routeId = response["data"]["locations"][0].routeId;
       measure = response["data"]["locations"][0]["geometries"][0].m;
@@ -487,15 +496,42 @@ require([
       };
       makeRequest(options, "geometryToStation");
     } else {
-      station = response["data"]["results"][0]["value"]["results"][0].stationid;
-      routeId = response["data"]["results"][0]["value"]["results"][0].routeid;
-      measure = response["data"]["results"][0]["value"]["results"][0].measure;
-      console.log(routeId, measure, station);
-      y = exLat.value;
-      x = exLon.value;
-      addPoint(x, y);
-      updateForm(routeId, measure, station);
+      let stationResults = response["data"]["results"][0]["value"]["results"];
+      if (stationResults && stationResults.length > 0)
+      {
+        //outer array
+        let stations = stationResults[0];
+        if (stations && stations.length > 0)
+        {
+          //inner array
+          station = stations[0].stationid;
+          routeId = stations[0].routeid;
+          measure = stations[0].measure;
+          console.log(routeId, measure, station);
+          y = exLat.value;
+          x = exLon.value;
+          addPoint(x, y);
+          updateForm(routeId, measure, station);
+        
+          console.log("Number of stations results: " + stations.length);
 
+          stations.forEach((refpost) => {
+            if (refpost.direction == "Upstream")
+            {
+              upRouteId = refpost.routeid;
+              upMeasure = refpost.measure;
+              upStation = refpost.stationid;
+            }
+            else if (refpost.direction == "Downstream")
+            {
+              dnRouteId = refpost.routeid;
+              dnMeasure = refpost.measure;
+              dnStation = refpost.stationid;
+            }
+          });
+          updateStations(upRouteId, upMeasure, upStation, dnRouteId, dnMeasure, dnStation);          
+        }
+      }
       updateExternal(routeId, measure, y, x);
       highlightFilter(routeId, station);
     }
@@ -536,6 +572,38 @@ require([
     if (station) {
       sInput.value = station;
     }
+  }
+
+  function updateStations(upRouteId, upMeasure, upStation, dnRouteId, dnMeasure, dnStation) {
+    console.log('upRouteId:' + upRouteId + ', upMeasure:' + upMeasure + ', upStation:' + upStation + 
+    ', dnRouteId:' + dnRouteId + ', dnMeasure:' + dnMeasure + ', dnStation:' + dnStation);
+    if (upRouteId) {
+      upRouteIDInput.value = upRouteId;
+    }
+    if (upMeasure || upMeasure === 0) {
+      upMeasureInput.value = Number(upMeasure.toFixed(7));
+    }
+    if (upStation) {
+      upStationInput.value = upStation;
+    }
+    if (dnRouteId) {
+      dnRouteIDInput.value = dnRouteId;
+    }
+    if (dnMeasure || dnMeasure === 0) {
+      dnMeasureInput.value = Number(dnMeasure.toFixed(7));
+    }
+    if (dnStation) {
+      dnStationInput.value = dnStation;
+    }
+  }
+
+  function clearStations() {
+    upRouteIDInput.value = '';
+    upMeasureInput.value = '';
+    upStationInput.value = '';
+    dnRouteIDInput.value = '';
+    dnMeasureInput.value = '';
+    dnStationInput.value = '';
   }
 
   view.when(() => {
