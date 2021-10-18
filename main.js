@@ -409,8 +409,7 @@ require([
       "https://maps.udot.utah.gov/randh/rest/services/ALRS_RP_Stationing/MapServer/exts/LRSServer/eventLayers/0/stationToGeometry",
     geometryToStation:
       //"https://maps.udot.utah.gov/randh/rest/services/ALRS_RP_Stationing/MapServer/exts/LRSServer/eventLayers/0/geometryToStation",
-      "https://transport.azure.esri-ps.com/server/rest/services/Points2RefPost/GPServer/Points2RefPost/execute",
-      //"https://maps.udot.utah.gov/randh/rest/services/Public/Points2RefPost/GPServer/Points2RefPost/execute",
+      "https://maps.udot.utah.gov/randh/rest/services/Public/Points2RefPost/GPServer/Points2RefPost/execute",
       // "https://maps.udot.utah.gov/randh/rest/services/Public/Points2RefPost_test/GPServer/Points2RefPost/execute",
     concurrencies:
       "https://maps.udot.utah.gov/randh/rest/services/ALRS_RP_Stationing/MapServer/exts/LRSServer/networkLayers/1/concurrencies",
@@ -426,7 +425,7 @@ require([
     const response = await esriRequest(urls[type], options);
   
     console.log(response, options, type);
-    if (
+    // if (
       type == "geometryToStation" ||
       response["data"]["locations"][0].status == "esriLocatingOK"
     ) {
